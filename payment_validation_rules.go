@@ -17,98 +17,37 @@
 package robokassa
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
-	"strings"
-	"unicode/utf8"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-)
 
-var (
-	supportedTaxRatesRule = validation.In(
-		TaxRateNone, TaxRateVat0, TaxRateVat10, TaxRateVat110,
-		TaxRateVat20, TaxRateVat22, TaxRateVat120, TaxRateVat122,
-		TaxRateVat5, TaxRateVat7, TaxRateVat105, TaxRateVat107,
-	)
-	supportedPaymentMethodsRule = validation.In(
-		PaymentMethodFullPrepayment, PaymentMethodPrepayment, PaymentMethodAdvance,
-		PaymentMethodFullPayment, PaymentMethodPartialPayment, PaymentMethodCredit,
-		PaymentMethodCreditPayment,
-	)
-	supportedPaymentObjectsRule = validation.In(
-		PaymentObjectCommodity, PaymentObjectExcise, PaymentObjectJob,
-		PaymentObjectService, PaymentObjectGamblingBet, PaymentObjectGamblingPrize,
-		PaymentObjectLottery, PaymentObjectLotteryWin, PaymentObjectLotteryPrize,
-		PaymentObjectIntellectualActivity, PaymentObjectPayment, PaymentObjectAgentCommission,
-		PaymentObjectComposite, PaymentObjectResortFee, PaymentObjectAnother,
-		PaymentObjectPropertyRight, PaymentObjectNonOperatingGain, PaymentObjectInsurancePremium,
-		PaymentObjectSalesTax, PaymentObjectProductMark,
-	)
+	internalvalidation "github.com/mikhail5545/go-robokassa-sdk/internal/validation"
 )
 
 func greaterThanZeroFloatRule(message string) validation.Rule {
-	return validation.By(func(value interface{}) error {
-		number, ok := value.(float64)
-		if !ok || number <= 0 {
-			return errors.New(message)
-		}
-		return nil
-	})
+	return internalvalidation.GreaterThanZeroFloatRule(message)
 }
 
 func greaterThanZeroInt64Rule(message string) validation.Rule {
-	return validation.By(func(value interface{}) error {
-		number, ok := value.(int64)
-		if !ok || number <= 0 {
-			return errors.New(message)
-		}
-		return nil
-	})
+	return internalvalidation.GreaterThanZeroInt64Rule(message)
 }
 
 func positiveDecimalStringRule(invalidNumericMessage, nonPositiveMessage string) validation.Rule {
-	return validation.By(func(value interface{}) error {
-		raw, ok := value.(string)
-		if !ok {
-			return errors.New(invalidNumericMessage)
-		}
-		parsed, err := strconv.ParseFloat(raw, 64)
-		if err != nil {
-			return errors.New(invalidNumericMessage)
-		}
-		if parsed <= 0 {
-			return errors.New(nonPositiveMessage)
-		}
-		return nil
-	})
+	return internalvalidation.PositiveDecimalStringRule(invalidNumericMessage, nonPositiveMessage)
 }
 
 func requiredTrimmedStringRule(message string) validation.Rule {
-	return validation.By(func(value interface{}) error {
-		text, ok := value.(string)
-		if !ok || strings.TrimSpace(text) == "" {
-			return errors.New(message)
-		}
-		return nil
-	})
+	return internalvalidation.RequiredTrimmedStringRule(message)
 }
 
 func maxRuneCountRule(max int, message string) validation.Rule {
-	return validation.By(func(value interface{}) error {
-		text, ok := value.(string)
-		if !ok || utf8.RuneCountInString(text) > max {
-			return errors.New(message)
-		}
-		return nil
-	})
+	return internalvalidation.MaxRuneCountRule(max, message)
 }
 
 func receiptTaxRateRule(index int) validation.Rule {
 	return validation.By(func(value interface{}) error {
 		taxRate, ok := value.(TaxRate)
-		if !ok || supportedTaxRatesRule.Validate(taxRate) != nil {
+		if !ok || !internalvalidation.IsSupportedTaxRate(taxRate.String()) {
 			return fmt.Errorf("invalid receipt item at index %d: unsupported tax rate %q", index, value)
 		}
 		return nil
@@ -118,7 +57,7 @@ func receiptTaxRateRule(index int) validation.Rule {
 func receiptPaymentMethodRule(index int) validation.Rule {
 	return validation.By(func(value interface{}) error {
 		paymentMethod, ok := value.(PaymentMethod)
-		if !ok || supportedPaymentMethodsRule.Validate(paymentMethod) != nil {
+		if !ok || !internalvalidation.IsSupportedPaymentMethod(paymentMethod.String()) {
 			return fmt.Errorf("invalid receipt item at index %d: unsupported payment_method %q", index, value)
 		}
 		return nil
@@ -128,7 +67,7 @@ func receiptPaymentMethodRule(index int) validation.Rule {
 func receiptPaymentObjectRule(index int) validation.Rule {
 	return validation.By(func(value interface{}) error {
 		paymentObject, ok := value.(PaymentObject)
-		if !ok || supportedPaymentObjectsRule.Validate(paymentObject) != nil {
+		if !ok || !internalvalidation.IsSupportedPaymentObject(paymentObject.String()) {
 			return fmt.Errorf("invalid receipt item at index %d: unsupported payment_object %q", index, value)
 		}
 		return nil

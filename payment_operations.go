@@ -371,19 +371,3 @@ func (c *Client) normalizeMerchantLogin(merchantLogin string) (string, error) {
 	}
 	return merchantLogin, nil
 }
-
-func normalizeInvoiceID(invoiceID int64) (string, error) {
-	if err := validation.Validate(invoiceID, greaterThanZeroInt64Rule("invoice id must be greater than zero")); err != nil {
-		return "", err
-	}
-	return strconv.FormatInt(invoiceID, 10), nil
-}
-
-func buildURLWithValues(rawURL string, values url.Values) (string, error) {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return "", fmt.Errorf("parse endpoint url: %w", err)
-	}
-	u.RawQuery = values.Encode()
-	return u.String(), nil
-}

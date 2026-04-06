@@ -17,17 +17,29 @@
 package robokassa
 
 import (
-	internalnormalization "github.com/mikhail5545/go-robokassa-sdk/internal/normalization"
+	"errors"
+	"strings"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
-func normalizeRequiredOutSum(outSum float64, outSumText string) (string, error) {
-	return internalnormalization.NormalizeRequiredOutSum(outSum, outSumText)
-}
+func validateURLData(urlData *URLData) error {
+	if urlData == nil {
+		return nil
+	}
 
-func normalizeOptionalOutSum(outSum *float64, outSumText string) (string, error) {
-	return internalnormalization.NormalizeOptionalOutSum(outSum, outSumText)
-}
-
-func normalizeDecimalStringAmount(raw string) (string, error) {
-	return internalnormalization.NormalizeDecimalStringAmount(raw)
+	err := validation.ValidateStruct(urlData,
+		validation.Field(&urlData.URL, requiredTrimmedStringRule("url is required")),
+		validation.Field(&urlData.Method, validation.By(func(interface{}) error {
+			if urlData.Method == "" {
+				return nil
+			}
+			method := strings.ToUpper(urlData.Method)
+			if method != "GET" && method != "POST" {
+				return errors.New("method must be GET or POST")
+			}
+			return nil
+		})),
+	)
+	return firstValidationError(err, "URL", "Method")
 }

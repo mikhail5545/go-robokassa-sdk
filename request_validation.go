@@ -17,32 +17,9 @@
 package robokassa
 
 import (
-	"errors"
-
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	internalvalidation "github.com/mikhail5545/go-robokassa-sdk/internal/validation"
 )
 
 func firstValidationError(err error, orderedFields ...string) error {
-	if err == nil {
-		return nil
-	}
-
-	var fieldErrors validation.Errors
-	if !errors.As(err, &fieldErrors) {
-		return err
-	}
-
-	for _, field := range orderedFields {
-		if fieldErr, exists := fieldErrors[field]; exists && fieldErr != nil {
-			return fieldErr
-		}
-	}
-
-	for _, fieldErr := range fieldErrors {
-		if fieldErr != nil {
-			return fieldErr
-		}
-	}
-
-	return err
+	return internalvalidation.FirstError(err, orderedFields...)
 }

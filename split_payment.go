@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -149,21 +148,4 @@ func (i SplitPaymentInvoice) validate() error {
 		}
 		return nil
 	}))
-}
-
-func outAmountToRaw(value float64) (int64, error) {
-	normalized := formatOutSum(value)
-	parts := strings.SplitN(normalized, ".", 2)
-	if len(parts) != 2 {
-		return 0, errors.New("out amount has invalid format")
-	}
-	whole, err := strconv.ParseInt(parts[0], 10, 64)
-	if err != nil {
-		return 0, errors.New("out amount has invalid integer part")
-	}
-	frac, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil {
-		return 0, errors.New("out amount has invalid fractional part")
-	}
-	return whole*100 + frac, nil
 }

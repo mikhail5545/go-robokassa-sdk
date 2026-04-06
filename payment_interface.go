@@ -18,24 +18,17 @@ package robokassa
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/url"
-	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 const (
 	// PaymentGatewayURL is the standard Robokassa payment page URL.
 	PaymentGatewayURL = "https://auth.robokassa.ru/Merchant/Index.aspx"
 )
-
-var shpKeySuffixRegex = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
 
 // InitPaymentRequest contains fields for pay-interface initialization
 // (https://docs.robokassa.ru/ru/pay-interface).
@@ -312,203 +305,4 @@ func (c *Client) hashHex(input string) (string, error) {
 	hasher := hashFactory()
 	_, _ = hasher.Write([]byte(input))
 	return hex.EncodeToString(hasher.Sum(nil)), nil
-}
-
-func marshalReceipt(r *Receipt) (string, error) {
-	if r == nil {
-		return "", nil
-	}
-	if err := validation.Validate(
-		len(r.Items),
-		validation.Min(1).Error("invalid receipt: must contain at least one item"),
-		validation.Max(100).Error("invalid receipt: cannot contain more than 100 items"),
-	); err != nil {
-		return "", err
-	}
-	for i, item := range r.Items {
-		if err := validateReceiptItem(i, item); err != nil {
-			return "", err
-		}
-	}
-	b, err := json.Marshal(r)
-	if err != nil {
-		return "", fmt.Errorf("marshal receipt: %w", err)
-	}
-	return string(b), nil
-}
-
-func validateReceiptItem(index int, item *ReceiptItem) error {
-	if err := validation.Validate(
-		item,
-		validation.Required.Error(fmt.Sprintf("invalid receipt: item at index %d is nil", index)),
-	); err != nil {
-		return err
-	}
-
-	if err := validation.Validate(
-		item.Name,
-		requiredTrimmedStringRule(fmt.Sprintf("invalid receipt item at index %d: name is required", index)),
-		maxRuneCountRule(128, fmt.Sprintf("invalid receipt item at index %d: name must not exceed 128 characters", index)),
-	); err != nil {
-		return err
-	}
-
-	if err := validation.Validate(
-		item.Quantity,
-		validation.By(func(value interface{}) error {
-			quantity, _ := value.(Quantity3)
-			if !quantity.IsValid() {
-				return fmt.Errorf("invalid receipt item at index %d: quantity must be within 0..99999.999", index)
-			}
-			return nil
-		}),
-		validation.By(func(value interface{}) error {
-			quantity, _ := value.(Quantity3)
-			if quantity <= 0 {
-				return fmt.Errorf("invalid receipt item at index %d: quantity must be > 0", index)
-			}
-			return nil
-		}),
-	); err != nil {
-		return err
-	}
-
-	if err := validation.Validate(
-		item.Sum,
-		validation.By(func(value interface{}) error {
-			sum, _ := value.(Price8x2)
-			if !sum.IsValid() {
-				return fmt.Errorf("invalid receipt item at index %d: sum must be within 0..99999999.99", index)
-			}
-			return nil
-		}),
-	); err != nil {
-		return err
-	}
-
-	if item.Cost != nil {
-		if err := validation.Validate(
-			*item.Cost,
-			validation.By(func(value interface{}) error {
-				cost, _ := value.(Price8x2)
-				if !cost.IsValid() {
-					return fmt.Errorf("invalid receipt item at index %d: cost must be within 0..99999999.99", index)
-				}
-				return nil
-			}),
-		); err != nil {
-			return err
-		}
-	}
-
-	if err := validation.Validate(item, validation.By(func(_ interface{}) error {
-		if item.Sum <= 0 && (item.Cost == nil || *item.Cost <= 0) {
-			return fmt.Errorf("invalid receipt item at index %d: sum or cost must be > 0", index)
-		}
-		return nil
-	})); err != nil {
-		return err
-	}
-
-	if err := validation.Validate(item.Tax, receiptTaxRateRule(index)); err != nil {
-		return err
-	}
-	if item.PaymentMethod != nil {
-		if err := validation.Validate(*item.PaymentMethod, receiptPaymentMethodRule(index)); err != nil {
-			return err
-		}
-	}
-	if item.PaymentObject != nil {
-		if err := validation.Validate(*item.PaymentObject, receiptPaymentObjectRule(index)); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func normalizeHTTPMethod(method *string) (string, error) {
-	raw := trimPtr(method)
-	if raw == "" {
-		return "", nil
-	}
-	upper := strings.ToUpper(raw)
-	if err := validation.Validate(upper, validation.In("GET", "POST").Error("method must be GET or POST")); err != nil {
-		return "", err
-	}
-	return upper, nil
-}
-
-func normalizeShpParams(in map[string]string) (map[string]string, error) {
-	if len(in) == 0 {
-		return nil, nil
-	}
-
-	out := make(map[string]string, len(in))
-	for key, value := range in {
-		key = strings.TrimSpace(key)
-		if err := validation.Validate(key, validation.Required.Error("shp key cannot be empty")); err != nil {
-			return nil, err
-		}
-
-		keySuffix := key
-		if strings.HasPrefix(strings.ToLower(key), "shp_") {
-			keySuffix = key[4:]
-		}
-		keySuffix = strings.TrimSpace(keySuffix)
-		if err := validation.Validate(
-			keySuffix,
-			validation.Required.Error(fmt.Sprintf("invalid shp key %q", key)),
-			validation.Match(shpKeySuffixRegex).Error(
-				fmt.Sprintf("invalid shp key %q: only latin letters, numbers and underscore are allowed", key),
-			),
-		); err != nil {
-			return nil, err
-		}
-
-		canonicalKey := "Shp_" + keySuffix
-		if _, exists := out[canonicalKey]; exists {
-			return nil, fmt.Errorf("duplicate shp key after normalization: %q", canonicalKey)
-		}
-		out[canonicalKey] = value
-	}
-
-	return out, nil
-}
-
-func isSupportedTaxRate(t TaxRate) bool {
-	return supportedTaxRatesRule.Validate(t) == nil
-}
-
-func isSupportedPaymentMethod(m PaymentMethod) bool {
-	return supportedPaymentMethodsRule.Validate(m) == nil
-}
-
-func isSupportedPaymentObject(o PaymentObject) bool {
-	return supportedPaymentObjectsRule.Validate(o) == nil
-}
-
-func formatOutSum(value float64) string {
-	return strconv.FormatFloat(value, 'f', 2, 64)
-}
-
-func trimPtr(v *string) string {
-	if v == nil {
-		return ""
-	}
-	return strings.TrimSpace(*v)
-}
-
-func sortedKeys[K ~string, V any](m map[K]V) []K {
-	if len(m) == 0 {
-		return nil
-	}
-	keys := make([]K, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
-	return keys
 }

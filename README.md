@@ -25,6 +25,11 @@ Go SDK for Robokassa Invoice API and payment interface helpers.
 go get github.com/mikhail5545/go-robokassa-sdk
 ```
 
+## Versioning policy
+
+- Current major version `v1` uses the base module path: `github.com/mikhail5545/go-robokassa-sdk`.
+- Semantic import suffixes are used only for future major versions (`/v2`, `/v3`, ...).
+
 ## Breaking changes
 
 - Legacy package paths `models/*` and `types/*` were removed.
@@ -63,7 +68,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-fmt.Println("Payment URL:", resp.URL)
+	fmt.Println("Payment URL:", resp.URL)
 }
 ```
 

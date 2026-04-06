@@ -17,8 +17,9 @@
 package robokassa
 
 import (
-	"bytes"
 	"encoding/json"
+
+	internalparsing "github.com/mikhail5545/go-robokassa-sdk/internal/parsing"
 )
 
 type RawResponse struct {
@@ -28,28 +29,11 @@ type RawResponse struct {
 }
 
 func parseRawResponse(body []byte) (*RawResponse, error) {
-	raw := make([]byte, len(body))
-	copy(raw, body)
-
-	trimmed := bytes.TrimSpace(body)
-	resp := &RawResponse{RawJSON: raw}
-
-	if len(trimmed) == 0 {
-		return resp, nil
+	rawJSON, rawString, object := internalparsing.ParseRawResponse(body)
+	resp := &RawResponse{
+		RawJSON: rawJSON,
+		String:  rawString,
+		Object:  object,
 	}
-
-	var asString string
-	if err := json.Unmarshal(trimmed, &asString); err == nil {
-		resp.String = asString
-		return resp, nil
-	}
-
-	var asObject map[string]any
-	if err := json.Unmarshal(trimmed, &asObject); err == nil {
-		resp.Object = asObject
-		return resp, nil
-	}
-
-	resp.String = string(trimmed)
 	return resp, nil
 }

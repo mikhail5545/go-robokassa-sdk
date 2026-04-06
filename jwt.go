@@ -18,17 +18,9 @@ package robokassa
 
 import (
 	"crypto/hmac"
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"hash"
-	"strings"
-
-	"golang.org/x/crypto/ripemd160"
 )
 
 type jwtHeader struct {
@@ -74,23 +66,4 @@ func (c *Client) sign(input string) (string, error) {
 	mac := hmac.New(hashFactory, secret)
 	_, _ = mac.Write([]byte(input))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil)), nil
-}
-
-func signerForAlgorithm(algorithm SignatureAlgorithm) (func() hash.Hash, error) {
-	switch strings.ToUpper(string(algorithm)) {
-	case "MD5":
-		return md5.New, nil
-	case "RIPEMD160":
-		return ripemd160.New, nil
-	case "SHA1", "HS1":
-		return sha1.New, nil
-	case "SHA256", "HS256":
-		return sha256.New, nil
-	case "SHA384", "HS384":
-		return sha512.New384, nil
-	case "SHA512", "HS512":
-		return sha512.New, nil
-	default:
-		return nil, fmt.Errorf("unsupported signature algorithm: %q", algorithm)
-	}
 }

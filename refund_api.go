@@ -19,13 +19,10 @@ package robokassa
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"net/http"
 	"net/url"
@@ -219,33 +216,4 @@ func (c *Client) createRefundToken(payload any) (string, error) {
 	signature := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
 	return signingInput + "." + signature, nil
-}
-
-func refundSignerForAlgorithm(algorithm SignatureAlgorithm) (headerAlgorithm string, factory func() hash.Hash, err error) {
-	switch strings.ToUpper(string(algorithm)) {
-	case "SHA512", "HS512":
-		return "HS512", sha512.New, nil
-	case "SHA384", "HS384":
-		return "HS384", sha512.New384, nil
-	case "SHA256", "HS256", "MD5", "RIPEMD160", "SHA1", "HS1", "":
-		return "HS256", sha256.New, nil
-	default:
-		return "", nil, fmt.Errorf("unsupported refund signature algorithm: %q", algorithm)
-	}
-}
-
-func firstBool(object map[string]any, keys ...string) bool {
-	for _, key := range keys {
-		value, ok := object[key]
-		if !ok || value == nil {
-			continue
-		}
-		switch typed := value.(type) {
-		case bool:
-			return typed
-		case string:
-			return strings.EqualFold(strings.TrimSpace(typed), "true")
-		}
-	}
-	return false
 }

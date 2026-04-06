@@ -17,18 +17,10 @@
 package robokassa
 
 import (
-	"bytes"
-	"crypto"
 	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/sha512"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"hash"
 	"net/url"
 	"sort"
 	"strconv"
@@ -246,65 +238,4 @@ func (r ResultURL2Notification) ParsedTimestamp() (time.Time, error) {
 		return time.Time{}, fmt.Errorf("parse timestamp: %w", err)
 	}
 	return time.Unix(sec, 0).UTC(), nil
-}
-
-func splitJWS(token string) (headerRaw []byte, payloadRaw []byte, signingInput string, signature []byte, err error) {
-	parts := strings.Split(strings.TrimSpace(token), ".")
-	if len(parts) != 3 {
-		return nil, nil, "", nil, errors.New("invalid JWS: expected 3 parts")
-	}
-
-	headerRaw, err = base64.RawURLEncoding.DecodeString(parts[0])
-	if err != nil {
-		return nil, nil, "", nil, fmt.Errorf("decode jws header: %w", err)
-	}
-	payloadRaw, err = base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, nil, "", nil, fmt.Errorf("decode jws payload: %w", err)
-	}
-	signature, err = base64.RawURLEncoding.DecodeString(parts[2])
-	if err != nil {
-		return nil, nil, "", nil, fmt.Errorf("decode jws signature: %w", err)
-	}
-
-	return headerRaw, payloadRaw, parts[0] + "." + parts[1], signature, nil
-}
-
-func parseCertificate(certificateData []byte) (*x509.Certificate, error) {
-	certificateData = bytes.TrimSpace(certificateData)
-	if len(certificateData) == 0 {
-		return nil, errors.New("certificate data is empty")
-	}
-
-	if block, _ := pem.Decode(certificateData); block != nil {
-		certificateData = block.Bytes
-	}
-
-	cert, err := x509.ParseCertificate(certificateData)
-	if err != nil {
-		return nil, fmt.Errorf("parse certificate: %w", err)
-	}
-	return cert, nil
-}
-
-func callbackValue(values url.Values, keys ...string) string {
-	for _, key := range keys {
-		if value := strings.TrimSpace(values.Get(key)); value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
-func jwtRSHash(alg string) (crypto.Hash, hash.Hash, error) {
-	switch strings.ToUpper(strings.TrimSpace(alg)) {
-	case "RS256":
-		return crypto.SHA256, sha256.New(), nil
-	case "RS384":
-		return crypto.SHA384, sha512.New384(), nil
-	case "RS512":
-		return crypto.SHA512, sha512.New(), nil
-	default:
-		return 0, nil, fmt.Errorf("unsupported jws algorithm: %q", alg)
-	}
 }

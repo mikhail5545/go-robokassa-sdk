@@ -17,24 +17,17 @@
 package robokassa
 
 import (
-	"strings"
-
-	validation "github.com/go-ozzo/ozzo-validation/v4"
+	internalvalidation "github.com/mikhail5545/go-robokassa-sdk/internal/validation"
 )
 
 func validateRequiredTrimmed(value, message string) error {
-	return validation.Validate(strings.TrimSpace(value), validation.Required.Error(message))
+	return internalvalidation.RequiredTrimmed(value, message)
 }
 
 func validatePositiveInt64(value int64, message string) error {
-	return validation.Validate(value, validation.Min(int64(1)).Error(message))
+	return internalvalidation.PositiveInt64(value, message)
 }
 
 func validateStringIn(value, message string, allowed ...string) error {
-	options := make([]any, 0, len(allowed))
-	for _, option := range allowed {
-		options = append(options, option)
-	}
-
-	return validation.Validate(value, validation.In(options...).Error(message))
+	return internalvalidation.StringIn(value, message, allowed...)
 }
