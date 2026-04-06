@@ -32,8 +32,7 @@ jobs:
 
       - name: Run Tests, Collect Coverage
         run: |
-          go test -v -covermode=atomic -coverprofile=coverage.tmp ./...
-          coverage.tmp > coverage.out
+          go test -v -covermode=atomic -coverprofile=coverage.out ./...
         working-directory: ./
 
       - name: Print Coverage Summary
