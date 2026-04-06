@@ -82,8 +82,8 @@ type ParsedResultURL2JWS struct {
 // after successful ResultURL validation.
 func ResultAcknowledgement(invID string) (string, error) {
 	invID = strings.TrimSpace(invID)
-	if invID == "" {
-		return "", errors.New("inv id is required")
+	if err := validateRequiredTrimmed(invID, "inv id is required"); err != nil {
+		return "", err
 	}
 	return "OK" + invID, nil
 }
@@ -113,8 +113,8 @@ func ParseCallbackNotification(values url.Values) CallbackNotification {
 }
 
 func (c *Client) ResultSignature(outSum, invID string, shp map[string]string) (string, error) {
-	if strings.TrimSpace(c.password2) == "" {
-		return "", errors.New("password2 is required to calculate ResultURL signature")
+	if err := validateRequiredTrimmed(c.password2, "password2 is required to calculate ResultURL signature"); err != nil {
+		return "", err
 	}
 	return c.callbackSignature(outSum, invID, c.password2, shp)
 }
@@ -150,11 +150,11 @@ func (c *Client) VerifySuccessNotification(notification CallbackNotification) (b
 func (c *Client) callbackSignature(outSum, invID, password string, shp map[string]string) (string, error) {
 	outSum = strings.TrimSpace(outSum)
 	invID = strings.TrimSpace(invID)
-	if outSum == "" {
-		return "", errors.New("out sum is required")
+	if err := validateRequiredTrimmed(outSum, "out sum is required"); err != nil {
+		return "", err
 	}
-	if invID == "" {
-		return "", errors.New("inv id is required")
+	if err := validateRequiredTrimmed(invID, "inv id is required"); err != nil {
+		return "", err
 	}
 
 	normalizedShp, err := normalizeShpParams(shp)
@@ -238,8 +238,8 @@ func VerifyResultURL2JWS(token string, certificateData []byte) error {
 }
 
 func (r ResultURL2Notification) ParsedTimestamp() (time.Time, error) {
-	if strings.TrimSpace(r.Header.Timestamp) == "" {
-		return time.Time{}, errors.New("timestamp is empty")
+	if err := validateRequiredTrimmed(r.Header.Timestamp, "timestamp is empty"); err != nil {
+		return time.Time{}, err
 	}
 	sec, err := strconv.ParseInt(r.Header.Timestamp, 10, 64)
 	if err != nil {

@@ -31,10 +31,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/mikhail5545/go-robokassa-sdk/models/items"
-	"github.com/mikhail5545/go-robokassa-sdk/models/receipt"
-	"github.com/mikhail5545/go-robokassa-sdk/types"
 )
 
 func TestBuildPaymentFormValues_SignsRequestWithModifiersAndShp(t *testing.T) {
@@ -46,7 +42,7 @@ func TestBuildPaymentFormValues_SignsRequestWithModifiersAndShp(t *testing.T) {
 
 	invID := int64(12)
 	desc := "Order #12"
-	culture := types.CultureRu
+	culture := CultureRu
 	successMethod := "get"
 	failMethod := "post"
 	successURL := "https://merchant.test/success"
@@ -60,13 +56,13 @@ func TestBuildPaymentFormValues_SignsRequestWithModifiersAndShp(t *testing.T) {
 		Description: &desc,
 		Culture:     &culture,
 		IsTest:      true,
-		Receipt: &receipt.Receipt{
-			Items: []*items.ReceiptItem{
+		Receipt: &Receipt{
+			Items: []*ReceiptItem{
 				{
 					Name:     "Product",
-					Quantity: types.Quantity3(1000),
-					Sum:      types.Price8x2(99000),
-					Tax:      types.TaxRateVat20,
+					Quantity: Quantity3(1000),
+					Sum:      Price8x2(99000),
+					Tax:      TaxRateVat20,
 				},
 			},
 		},
@@ -246,7 +242,19 @@ func TestParseAndVerifyResultURL2JWS(t *testing.T) {
 		t.Fatalf("verify jws by pem: %v", err)
 	}
 
-	tampered := token[:len(token)-1] + "A"
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		t.Fatalf("unexpected jws format: %q", token)
+	}
+	if len(parts[2]) == 0 {
+		t.Fatalf("empty jws signature in token: %q", token)
+	}
+
+	replacement := "A"
+	if strings.HasPrefix(parts[2], "A") {
+		replacement = "B"
+	}
+	tampered := parts[0] + "." + parts[1] + "." + replacement + parts[2][1:]
 	if err := VerifyResultURL2JWS(tampered, certificatePEM); err == nil {
 		t.Fatal("expected tampered jws verification error")
 	}

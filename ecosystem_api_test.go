@@ -27,11 +27,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/mikhail5545/go-robokassa-sdk/models/items"
-	"github.com/mikhail5545/go-robokassa-sdk/models/receipt"
-	"github.com/mikhail5545/go-robokassa-sdk/models/split"
-	"github.com/mikhail5545/go-robokassa-sdk/types"
 )
 
 func TestBuildConfirmAndCancelPaymentFormValues_SignatureProfiles(t *testing.T) {
@@ -152,7 +147,7 @@ func TestXMLClient_GetCurrenciesAndOpStateExt(t *testing.T) {
 		XMLBaseURL:    server.URL,
 	})
 
-	lang := types.CultureRu
+	lang := CultureRu
 	currencies, err := client.GetCurrencies(context.Background(), &lang)
 	if err != nil {
 		t.Fatalf("get currencies: %v", err)
@@ -255,14 +250,14 @@ func TestBuildSplitPaymentFormValues_SignsInvoiceJSON(t *testing.T) {
 		Merchant: SplitMasterMerchant{
 			ID: "master-shop",
 		},
-		SplitMerchants: []split.Merchant{
+		SplitMerchants: []SplitMerchant{
 			{
 				ID:     "master-shop",
-				Amount: types.Amount(50000),
+				Amount: Amount(50000),
 			},
 			{
 				ID:     "partner-shop",
-				Amount: types.Amount(20000),
+				Amount: Amount(20000),
 			},
 		},
 	})
@@ -286,17 +281,17 @@ func TestBuildPaymentFormValues_ReceiptValidationParity(t *testing.T) {
 		Password1:     "password1",
 	})
 
-	fullPayment := types.PaymentMethodFullPayment
-	lotteryPrize := types.PaymentObjectLotteryPrize
+	fullPayment := PaymentMethodFullPayment
+	lotteryPrize := PaymentObjectLotteryPrize
 	_, err := client.BuildPaymentFormValues(InitPaymentRequest{
 		OutSum: 10,
-		Receipt: &receipt.Receipt{
-			Items: []*items.ReceiptItem{
+		Receipt: &Receipt{
+			Items: []*ReceiptItem{
 				{
 					Name:          "Subscription",
-					Quantity:      types.Quantity3(1000),
-					Sum:           types.Price8x2(1000),
-					Tax:           types.TaxRateVat22,
+					Quantity:      Quantity3(1000),
+					Sum:           Price8x2(1000),
+					Tax:           TaxRateVat22,
 					PaymentMethod: &fullPayment,
 					PaymentObject: &lotteryPrize,
 				},

@@ -14,17 +14,35 @@
  * limitations under the License.
  */
 
-package receipt
+package robokassa
 
 import (
-	"github.com/mikhail5545/go-robokassa-sdk/models/items"
-	"github.com/mikhail5545/go-robokassa-sdk/types"
+	"errors"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
-type Receipt struct {
-	// An array of receipt item data. At least one item must be provided, but single receipt can contain no more than 100 product items.
-	Items []*items.ReceiptItem `json:"items,omitempty"`
-	// This parameter is optional; if omitted, the value from your personal account is used. Pass only if you need
-	// to differentiate tax systems for different products.
-	Sno *types.TaxSystem `json:"sno,omitempty"`
+func firstValidationError(err error, orderedFields ...string) error {
+	if err == nil {
+		return nil
+	}
+
+	var fieldErrors validation.Errors
+	if !errors.As(err, &fieldErrors) {
+		return err
+	}
+
+	for _, field := range orderedFields {
+		if fieldErr, exists := fieldErrors[field]; exists && fieldErr != nil {
+			return fieldErr
+		}
+	}
+
+	for _, fieldErr := range fieldErrors {
+		if fieldErr != nil {
+			return fieldErr
+		}
+	}
+
+	return err
 }

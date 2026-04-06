@@ -29,8 +29,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/mikhail5545/go-robokassa-sdk/types"
 )
 
 func TestNewClient_ValidationAndDefaults(t *testing.T) {
@@ -151,7 +149,7 @@ func TestCreateInvoice_AutoInjectsMerchantLoginAndParsesURLString(t *testing.T) 
 	})
 
 	resp, err := client.CreateInvoice(context.Background(), CreateInvoiceRequest{
-		InvoiceType: types.InvoiceTypeOneTime,
+		InvoiceType: InvoiceTypeOneTime,
 		OutSum:      150,
 	})
 	if err != nil {
@@ -176,7 +174,7 @@ func TestCreateInvoice_ParsesURLFromObjectResponse(t *testing.T) {
 	})
 
 	resp, err := client.CreateInvoice(context.Background(), CreateInvoiceRequest{
-		InvoiceType: types.InvoiceTypeOneTime,
+		InvoiceType: InvoiceTypeOneTime,
 		OutSum:      99,
 	})
 	if err != nil {
@@ -214,8 +212,8 @@ func TestGetInvoiceInformationList_Validation(t *testing.T) {
 	_, err = client.GetInvoiceInformationList(context.Background(), GetInvoiceInformationListRequest{
 		CurrentPage:     1,
 		PageSize:        10,
-		InvoiceStatuses: []types.InvoiceStatus{types.InvoiceStatusPaid},
-		InvoiceTypes:    []types.InvoiceType{types.InvoiceTypeOneTime},
+		InvoiceStatuses: []InvoiceStatus{InvoiceStatusPaid},
+		InvoiceTypes:    []InvoiceType{InvoiceTypeOneTime},
 		DateFrom:        &now,
 		DateTo:          &now,
 	})
@@ -238,7 +236,7 @@ func TestCreateInvoice_PropagatesHTTPError(t *testing.T) {
 	})
 
 	_, err := client.CreateInvoice(context.Background(), CreateInvoiceRequest{
-		InvoiceType: types.InvoiceTypeOneTime,
+		InvoiceType: InvoiceTypeOneTime,
 		OutSum:      10,
 	})
 	if err == nil {

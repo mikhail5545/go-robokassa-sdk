@@ -19,15 +19,12 @@ package robokassa
 import (
 	"context"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/mikhail5545/go-robokassa-sdk/types"
 )
 
 type XMLResult struct {
@@ -98,13 +95,13 @@ type OpStateExtResponse struct {
 	UserFields []OpStateUserField `xml:"UserField>Field"`
 }
 
-func (c *Client) GetCurrencies(ctx context.Context, language *types.Culture) (*GetCurrenciesResponse, error) {
+func (c *Client) GetCurrencies(ctx context.Context, language *Culture) (*GetCurrenciesResponse, error) {
 	lang := "ru"
 	if language != nil && strings.TrimSpace(language.String()) != "" {
 		lang = strings.TrimSpace(language.String())
 	}
-	if lang != "ru" && lang != "en" {
-		return nil, errors.New("language must be ru or en")
+	if err := validateStringIn(lang, "language must be ru or en", "ru", "en"); err != nil {
+		return nil, err
 	}
 
 	params := make(url.Values)
@@ -127,11 +124,11 @@ func (c *Client) GetCurrencies(ctx context.Context, language *types.Culture) (*G
 }
 
 func (c *Client) OpStateExt(ctx context.Context, invoiceID int64) (*OpStateExtResponse, error) {
-	if invoiceID <= 0 {
-		return nil, errors.New("invoice id must be greater than zero")
+	if err := validatePositiveInt64(invoiceID, "invoice id must be greater than zero"); err != nil {
+		return nil, err
 	}
-	if strings.TrimSpace(c.password2) == "" {
-		return nil, errors.New("password2 is required for OpStateExt")
+	if err := validateRequiredTrimmed(c.password2, "password2 is required for OpStateExt"); err != nil {
+		return nil, err
 	}
 
 	signatureSource := c.merchantLogin + ":" + strconv.FormatInt(invoiceID, 10) + ":" + c.password2

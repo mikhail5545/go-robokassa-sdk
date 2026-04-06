@@ -17,13 +17,12 @@
 package robokassa
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 
-	"github.com/mikhail5545/go-robokassa-sdk/models/receipt"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 const (
@@ -49,7 +48,7 @@ type ConfirmPaymentRequest struct {
 	InvoiceID     int64
 	OutSum        float64
 	OutSumText    string
-	Receipt       *receipt.Receipt
+	Receipt       *Receipt
 	Shp           map[string]string
 }
 
@@ -71,7 +70,7 @@ type RecurringPaymentRequest struct {
 	OutSumText        string
 	Description       *string
 	Email             *string
-	Receipt           *receipt.Receipt
+	Receipt           *Receipt
 	ResultURL2        *string
 	Shp               map[string]string
 }
@@ -238,10 +237,13 @@ func (c *Client) BuildRecurringPaymentFormValues(req RecurringPaymentRequest) (u
 	if err != nil {
 		return nil, err
 	}
-	previousInvoiceID, err := normalizeInvoiceID(req.PreviousInvoiceID)
-	if err != nil {
-		return nil, errors.New("previous invoice id must be greater than zero")
+	if err := validation.Validate(
+		req.PreviousInvoiceID,
+		greaterThanZeroInt64Rule("previous invoice id must be greater than zero"),
+	); err != nil {
+		return nil, err
 	}
+	previousInvoiceID := strconv.FormatInt(req.PreviousInvoiceID, 10)
 	outSum, err := normalizeRequiredOutSum(req.OutSum, req.OutSumText)
 	if err != nil {
 		return nil, err
@@ -307,8 +309,8 @@ func (c *Client) BuildCoFPaymentFormValues(req InitPaymentRequest) (url.Values, 
 	if err != nil {
 		return nil, err
 	}
-	if n.token == "" {
-		return nil, errors.New("token is required for CoF payment")
+	if err := validation.Validate(n.token, validation.Required.Error("token is required for CoF payment")); err != nil {
+		return nil, err
 	}
 
 	signature, err := c.hashHex(c.paymentSignatureBaseStringForProfile(paymentSignatureProfileCoF, n))
@@ -364,15 +366,15 @@ func (c *Client) normalizeMerchantLogin(merchantLogin string) (string, error) {
 	if merchantLogin == "" {
 		merchantLogin = c.merchantLogin
 	}
-	if merchantLogin == "" {
-		return "", errors.New("merchant login is required")
+	if err := validation.Validate(merchantLogin, validation.Required.Error("merchant login is required")); err != nil {
+		return "", err
 	}
 	return merchantLogin, nil
 }
 
 func normalizeInvoiceID(invoiceID int64) (string, error) {
-	if invoiceID <= 0 {
-		return "", errors.New("invoice id must be greater than zero")
+	if err := validation.Validate(invoiceID, greaterThanZeroInt64Rule("invoice id must be greater than zero")); err != nil {
+		return "", err
 	}
 	return strconv.FormatInt(invoiceID, 10), nil
 }

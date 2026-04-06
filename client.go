@@ -19,7 +19,6 @@ package robokassa
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -82,11 +81,11 @@ func (e *APIError) Error() string {
 }
 
 func NewClient(cfg Config) (*Client, error) {
-	if strings.TrimSpace(cfg.MerchantLogin) == "" {
-		return nil, errors.New("merchant login is required")
+	if err := validateRequiredTrimmed(cfg.MerchantLogin, "merchant login is required"); err != nil {
+		return nil, err
 	}
-	if strings.TrimSpace(cfg.Password1) == "" {
-		return nil, errors.New("password1 is required")
+	if err := validateRequiredTrimmed(cfg.Password1, "password1 is required"); err != nil {
+		return nil, err
 	}
 
 	algorithm := cfg.SignatureAlgorithm

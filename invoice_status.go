@@ -24,16 +24,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/mikhail5545/go-robokassa-sdk/types"
 )
 
 type InvoiceInformation struct {
 	ID          string
 	EncodedID   string
 	InvID       string
-	Status      types.InvoiceStatus
-	InvoiceType types.InvoiceType
+	Status      InvoiceStatus
+	InvoiceType InvoiceType
 	OutSum      *float64
 	Description string
 
@@ -129,37 +127,37 @@ func parseInvoiceInformation(in map[string]any) InvoiceInformation {
 	return info
 }
 
-func normalizeInvoiceStatus(value string) types.InvoiceStatus {
+func normalizeInvoiceStatus(value string) InvoiceStatus {
 	raw := strings.TrimSpace(value)
 	normalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(raw, "-", ""), "_", ""))
 	switch normalized {
 	case "paid", "ok", "success":
-		return types.InvoiceStatusPaid
+		return InvoiceStatusPaid
 	case "expired":
-		return types.InvoiceStatusExpired
+		return InvoiceStatusExpired
 	case "notpaid", "unpaid", "new", "created":
-		return types.InvoiceStatusNotPaid
+		return InvoiceStatusNotPaid
 	default:
 		if raw == "" {
 			return ""
 		}
-		return types.InvoiceStatus(raw)
+		return InvoiceStatus(raw)
 	}
 }
 
-func normalizeInvoiceType(value string) types.InvoiceType {
+func normalizeInvoiceType(value string) InvoiceType {
 	raw := strings.TrimSpace(value)
 	normalized := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(raw, "-", ""), "_", ""))
 	switch normalized {
 	case "onetime":
-		return types.InvoiceTypeOneTime
+		return InvoiceTypeOneTime
 	case "reusable":
-		return types.InvoiceTypeReusable
+		return InvoiceTypeReusable
 	default:
 		if raw == "" {
 			return ""
 		}
-		return types.InvoiceType(raw)
+		return InvoiceType(raw)
 	}
 }
 

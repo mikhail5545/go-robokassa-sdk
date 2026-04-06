@@ -17,11 +17,11 @@
 package robokassa
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
+
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 var decimalAmountRegex = regexp.MustCompile(`^\d+(\.\d{1,6})?$`)
@@ -32,17 +32,16 @@ func normalizeRequiredOutSum(outSum float64, outSumText string) (string, error) 
 		if err != nil {
 			return "", err
 		}
-		parsed, err := strconv.ParseFloat(normalized, 64)
-		if err != nil {
-			return "", errors.New("out sum has invalid numeric value")
-		}
-		if parsed <= 0 {
-			return "", errors.New("out sum must be greater than zero")
+		if err := validation.Validate(
+			normalized,
+			positiveDecimalStringRule("out sum has invalid numeric value", "out sum must be greater than zero"),
+		); err != nil {
+			return "", err
 		}
 		return normalized, nil
 	}
-	if outSum <= 0 {
-		return "", errors.New("out sum must be greater than zero")
+	if err := validation.Validate(outSum, greaterThanZeroFloatRule("out sum must be greater than zero")); err != nil {
+		return "", err
 	}
 	return formatOutSum(outSum), nil
 }
@@ -53,31 +52,31 @@ func normalizeOptionalOutSum(outSum *float64, outSumText string) (string, error)
 		if err != nil {
 			return "", err
 		}
-		parsed, err := strconv.ParseFloat(normalized, 64)
-		if err != nil {
-			return "", errors.New("out sum has invalid numeric value")
-		}
-		if parsed <= 0 {
-			return "", errors.New("out sum must be greater than zero")
+		if err := validation.Validate(
+			normalized,
+			positiveDecimalStringRule("out sum has invalid numeric value", "out sum must be greater than zero"),
+		); err != nil {
+			return "", err
 		}
 		return normalized, nil
 	}
 	if outSum == nil {
 		return "", nil
 	}
-	if *outSum <= 0 {
-		return "", errors.New("out sum must be greater than zero")
+	if err := validation.Validate(*outSum, greaterThanZeroFloatRule("out sum must be greater than zero")); err != nil {
+		return "", err
 	}
 	return formatOutSum(*outSum), nil
 }
 
 func normalizeDecimalStringAmount(raw string) (string, error) {
 	amount := strings.TrimSpace(strings.ReplaceAll(raw, ",", "."))
-	if amount == "" {
-		return "", errors.New("out sum is required")
-	}
-	if !decimalAmountRegex.MatchString(amount) {
-		return "", fmt.Errorf("out sum has invalid format: %q", raw)
+	if err := validation.Validate(
+		amount,
+		validation.Required.Error("out sum is required"),
+		validation.Match(decimalAmountRegex).Error(fmt.Sprintf("out sum has invalid format: %q", raw)),
+	); err != nil {
+		return "", err
 	}
 	if !strings.Contains(amount, ".") {
 		amount += ".00"

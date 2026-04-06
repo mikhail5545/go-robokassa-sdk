@@ -25,6 +25,11 @@ Go SDK for Robokassa Invoice API and payment interface helpers.
 go get github.com/mikhail5545/go-robokassa-sdk
 ```
 
+## Breaking changes
+
+- Legacy package paths `models/*` and `types/*` were removed.
+- Use root package types instead: `robokassa.Receipt`, `robokassa.ReceiptItem`, `robokassa.InvoiceItem`, `robokassa.SplitMerchant`, `robokassa.Quantity3`, `robokassa.Price8x2`, `robokassa.Amount`, and enum/constants from `robokassa` directly.
+
 ## Quick start
 
 ```go
@@ -36,7 +41,6 @@ import (
 	"log"
 
 	robokassa "github.com/mikhail5545/go-robokassa-sdk"
-	"github.com/mikhail5545/go-robokassa-sdk/types"
 )
 
 func main() {
@@ -52,7 +56,7 @@ func main() {
 	}
 
 	resp, err := client.CreateInvoice(context.Background(), robokassa.CreateInvoiceRequest{
-		InvoiceType: types.InvoiceTypeOneTime,
+		InvoiceType: robokassa.InvoiceTypeOneTime,
 		OutSum:      100.50,
 	})
 	if err != nil {
@@ -104,25 +108,6 @@ if err != nil {
 	log.Fatal(err)
 }
 fmt.Println("refund request id:", refund.RequestID)
-```
-
-### Legacy `models/requests` adapters
-
-If you still use legacy request models, convert them to the domain request types from the root package:
-
-```go
-import legacyrequests "github.com/mikhail5545/go-robokassa-sdk/models/requests"
-
-legacy := legacyrequests.PaymentRequest{OutSum: 100}
-modern, err := legacy.ToInitPaymentRequest()
-if err != nil {
-	log.Fatal(err)
-}
-link, err := client.BuildPaymentURL(modern)
-if err != nil {
-	log.Fatal(err)
-}
-fmt.Println(link)
 ```
 
 ### Verify ResultURL webhook
@@ -177,9 +162,9 @@ fmt.Println("currency groups:", len(currencies.Groups))
 splitURL, err := client.BuildSplitPaymentURL(robokassa.SplitPaymentInvoice{
 	OutAmount: 700,
 	Merchant:  robokassa.SplitMasterMerchant{ID: "master-shop"},
-	SplitMerchants: []split.Merchant{
-		{ID: "master-shop", Amount: types.Amount(50000)},
-		{ID: "partner-shop", Amount: types.Amount(20000)},
+	SplitMerchants: []robokassa.SplitMerchant{
+		{ID: "master-shop", Amount: robokassa.Amount(50000)},
+		{ID: "partner-shop", Amount: robokassa.Amount(20000)},
 	},
 })
 if err != nil {

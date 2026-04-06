@@ -22,8 +22,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/mikhail5545/go-robokassa-sdk/types"
 )
 
 func TestParseInvoiceInformationListResponse_FlexibleKeys(t *testing.T) {
@@ -64,11 +62,11 @@ func TestParseInvoiceInformationListResponse_FlexibleKeys(t *testing.T) {
 	if invoice.ID != "internal-id" || invoice.InvID != "123" {
 		t.Fatalf("unexpected invoice identifiers: %+v", invoice)
 	}
-	if invoice.Status != types.InvoiceStatusPaid {
-		t.Fatalf("unexpected status: got=%q want=%q", invoice.Status, types.InvoiceStatusPaid)
+	if invoice.Status != InvoiceStatusPaid {
+		t.Fatalf("unexpected status: got=%q want=%q", invoice.Status, InvoiceStatusPaid)
 	}
-	if invoice.InvoiceType != types.InvoiceTypeOneTime {
-		t.Fatalf("unexpected invoice type: got=%q want=%q", invoice.InvoiceType, types.InvoiceTypeOneTime)
+	if invoice.InvoiceType != InvoiceTypeOneTime {
+		t.Fatalf("unexpected invoice type: got=%q want=%q", invoice.InvoiceType, InvoiceTypeOneTime)
 	}
 	if invoice.OutSum == nil || *invoice.OutSum != 10.50 {
 		t.Fatalf("unexpected out sum: %+v", invoice.OutSum)
@@ -115,10 +113,10 @@ func TestGetInvoiceInformationListTyped_UsesTypedParser(t *testing.T) {
 	typed, err := client.GetInvoiceInformationListTyped(context.Background(), GetInvoiceInformationListRequest{
 		CurrentPage:     1,
 		PageSize:        10,
-		InvoiceStatuses: []types.InvoiceStatus{types.InvoiceStatusPaid, types.InvoiceStatusExpired, types.InvoiceStatusNotPaid},
+		InvoiceStatuses: []InvoiceStatus{InvoiceStatusPaid, InvoiceStatusExpired, InvoiceStatusNotPaid},
 		DateFrom:        &from,
 		DateTo:          &to,
-		InvoiceTypes:    []types.InvoiceType{types.InvoiceTypeOneTime, types.InvoiceTypeReusable},
+		InvoiceTypes:    []InvoiceType{InvoiceTypeOneTime, InvoiceTypeReusable},
 	})
 	if err != nil {
 		t.Fatalf("get typed invoice information list: %v", err)
@@ -126,10 +124,10 @@ func TestGetInvoiceInformationListTyped_UsesTypedParser(t *testing.T) {
 	if len(typed.Invoices) != 1 {
 		t.Fatalf("unexpected invoice count: got=%d want=1", len(typed.Invoices))
 	}
-	if typed.Invoices[0].Status != types.InvoiceStatusExpired {
-		t.Fatalf("unexpected status: got=%q want=%q", typed.Invoices[0].Status, types.InvoiceStatusExpired)
+	if typed.Invoices[0].Status != InvoiceStatusExpired {
+		t.Fatalf("unexpected status: got=%q want=%q", typed.Invoices[0].Status, InvoiceStatusExpired)
 	}
-	if typed.Invoices[0].InvoiceType != types.InvoiceTypeReusable {
-		t.Fatalf("unexpected type: got=%q want=%q", typed.Invoices[0].InvoiceType, types.InvoiceTypeReusable)
+	if typed.Invoices[0].InvoiceType != InvoiceTypeReusable {
+		t.Fatalf("unexpected type: got=%q want=%q", typed.Invoices[0].InvoiceType, InvoiceTypeReusable)
 	}
 }

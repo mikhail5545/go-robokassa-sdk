@@ -19,7 +19,6 @@ package robokassa
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -28,8 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mikhail5545/go-robokassa-sdk/models/receipt"
-	"github.com/mikhail5545/go-robokassa-sdk/types"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 const (
@@ -53,13 +51,13 @@ type InitPaymentRequest struct {
 	Email       *string
 
 	IncCurrLabel *string
-	Culture      *types.Culture
+	Culture      *Culture
 	Encoding     *string
 
 	IsTest bool
 
 	ExpirationDate *time.Time
-	Receipt        *receipt.Receipt
+	Receipt        *Receipt
 
 	StepByStep bool
 
@@ -227,12 +225,9 @@ func (c *Client) PaymentSignatureBaseString(req InitPaymentRequest) (string, err
 }
 
 func (c *Client) normalizeInitPaymentRequest(req InitPaymentRequest) (*normalizedPaymentRequest, error) {
-	merchantLogin := strings.TrimSpace(req.MerchantLogin)
-	if merchantLogin == "" {
-		merchantLogin = c.merchantLogin
-	}
-	if merchantLogin == "" {
-		return nil, errors.New("merchant login is required")
+	merchantLogin, err := c.normalizeMerchantLogin(req.MerchantLogin)
+	if err != nil {
+		return nil, err
 	}
 	outSum, err := normalizeRequiredOutSum(req.OutSum, req.OutSumText)
 	if err != nil {
@@ -319,37 +314,20 @@ func (c *Client) hashHex(input string) (string, error) {
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
-func marshalReceipt(r *receipt.Receipt) (string, error) {
+func marshalReceipt(r *Receipt) (string, error) {
 	if r == nil {
 		return "", nil
 	}
-	if len(r.Items) == 0 {
-		return "", errors.New("invalid receipt: must contain at least one item")
-	}
-	if len(r.Items) > 100 {
-		return "", errors.New("invalid receipt: cannot contain more than 100 items")
+	if err := validation.Validate(
+		len(r.Items),
+		validation.Min(1).Error("invalid receipt: must contain at least one item"),
+		validation.Max(100).Error("invalid receipt: cannot contain more than 100 items"),
+	); err != nil {
+		return "", err
 	}
 	for i, item := range r.Items {
-		if item == nil {
-			return "", fmt.Errorf("invalid receipt: item at index %d is nil", i)
-		}
-		if strings.TrimSpace(item.Name) == "" {
-			return "", fmt.Errorf("invalid receipt item at index %d: name is required", i)
-		}
-		if item.Quantity <= 0 {
-			return "", fmt.Errorf("invalid receipt item at index %d: quantity must be > 0", i)
-		}
-		if item.Sum <= 0 && (item.Cost == nil || *item.Cost <= 0) {
-			return "", fmt.Errorf("invalid receipt item at index %d: sum or cost must be > 0", i)
-		}
-		if !isSupportedTaxRate(item.Tax) {
-			return "", fmt.Errorf("invalid receipt item at index %d: unsupported tax rate %q", i, item.Tax)
-		}
-		if item.PaymentMethod != nil && !isSupportedPaymentMethod(*item.PaymentMethod) {
-			return "", fmt.Errorf("invalid receipt item at index %d: unsupported payment_method %q", i, *item.PaymentMethod)
-		}
-		if item.PaymentObject != nil && !isSupportedPaymentObject(*item.PaymentObject) {
-			return "", fmt.Errorf("invalid receipt item at index %d: unsupported payment_object %q", i, *item.PaymentObject)
+		if err := validateReceiptItem(i, item); err != nil {
+			return "", err
 		}
 	}
 	b, err := json.Marshal(r)
@@ -359,14 +337,104 @@ func marshalReceipt(r *receipt.Receipt) (string, error) {
 	return string(b), nil
 }
 
+func validateReceiptItem(index int, item *ReceiptItem) error {
+	if err := validation.Validate(
+		item,
+		validation.Required.Error(fmt.Sprintf("invalid receipt: item at index %d is nil", index)),
+	); err != nil {
+		return err
+	}
+
+	if err := validation.Validate(
+		item.Name,
+		requiredTrimmedStringRule(fmt.Sprintf("invalid receipt item at index %d: name is required", index)),
+		maxRuneCountRule(128, fmt.Sprintf("invalid receipt item at index %d: name must not exceed 128 characters", index)),
+	); err != nil {
+		return err
+	}
+
+	if err := validation.Validate(
+		item.Quantity,
+		validation.By(func(value interface{}) error {
+			quantity, _ := value.(Quantity3)
+			if !quantity.IsValid() {
+				return fmt.Errorf("invalid receipt item at index %d: quantity must be within 0..99999.999", index)
+			}
+			return nil
+		}),
+		validation.By(func(value interface{}) error {
+			quantity, _ := value.(Quantity3)
+			if quantity <= 0 {
+				return fmt.Errorf("invalid receipt item at index %d: quantity must be > 0", index)
+			}
+			return nil
+		}),
+	); err != nil {
+		return err
+	}
+
+	if err := validation.Validate(
+		item.Sum,
+		validation.By(func(value interface{}) error {
+			sum, _ := value.(Price8x2)
+			if !sum.IsValid() {
+				return fmt.Errorf("invalid receipt item at index %d: sum must be within 0..99999999.99", index)
+			}
+			return nil
+		}),
+	); err != nil {
+		return err
+	}
+
+	if item.Cost != nil {
+		if err := validation.Validate(
+			*item.Cost,
+			validation.By(func(value interface{}) error {
+				cost, _ := value.(Price8x2)
+				if !cost.IsValid() {
+					return fmt.Errorf("invalid receipt item at index %d: cost must be within 0..99999999.99", index)
+				}
+				return nil
+			}),
+		); err != nil {
+			return err
+		}
+	}
+
+	if err := validation.Validate(item, validation.By(func(_ interface{}) error {
+		if item.Sum <= 0 && (item.Cost == nil || *item.Cost <= 0) {
+			return fmt.Errorf("invalid receipt item at index %d: sum or cost must be > 0", index)
+		}
+		return nil
+	})); err != nil {
+		return err
+	}
+
+	if err := validation.Validate(item.Tax, receiptTaxRateRule(index)); err != nil {
+		return err
+	}
+	if item.PaymentMethod != nil {
+		if err := validation.Validate(*item.PaymentMethod, receiptPaymentMethodRule(index)); err != nil {
+			return err
+		}
+	}
+	if item.PaymentObject != nil {
+		if err := validation.Validate(*item.PaymentObject, receiptPaymentObjectRule(index)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func normalizeHTTPMethod(method *string) (string, error) {
 	raw := trimPtr(method)
 	if raw == "" {
 		return "", nil
 	}
 	upper := strings.ToUpper(raw)
-	if upper != "GET" && upper != "POST" {
-		return "", errors.New("method must be GET or POST")
+	if err := validation.Validate(upper, validation.In("GET", "POST").Error("method must be GET or POST")); err != nil {
+		return "", err
 	}
 	return upper, nil
 }
@@ -379,8 +447,8 @@ func normalizeShpParams(in map[string]string) (map[string]string, error) {
 	out := make(map[string]string, len(in))
 	for key, value := range in {
 		key = strings.TrimSpace(key)
-		if key == "" {
-			return nil, errors.New("shp key cannot be empty")
+		if err := validation.Validate(key, validation.Required.Error("shp key cannot be empty")); err != nil {
+			return nil, err
 		}
 
 		keySuffix := key
@@ -388,11 +456,14 @@ func normalizeShpParams(in map[string]string) (map[string]string, error) {
 			keySuffix = key[4:]
 		}
 		keySuffix = strings.TrimSpace(keySuffix)
-		if keySuffix == "" {
-			return nil, fmt.Errorf("invalid shp key %q", key)
-		}
-		if !shpKeySuffixRegex.MatchString(keySuffix) {
-			return nil, fmt.Errorf("invalid shp key %q: only latin letters, numbers and underscore are allowed", key)
+		if err := validation.Validate(
+			keySuffix,
+			validation.Required.Error(fmt.Sprintf("invalid shp key %q", key)),
+			validation.Match(shpKeySuffixRegex).Error(
+				fmt.Sprintf("invalid shp key %q: only latin letters, numbers and underscore are allowed", key),
+			),
+		); err != nil {
+			return nil, err
 		}
 
 		canonicalKey := "Shp_" + keySuffix
@@ -405,41 +476,16 @@ func normalizeShpParams(in map[string]string) (map[string]string, error) {
 	return out, nil
 }
 
-func isSupportedTaxRate(t types.TaxRate) bool {
-	switch t {
-	case types.TaxRateNone, types.TaxRateVat0, types.TaxRateVat10, types.TaxRateVat110,
-		types.TaxRateVat20, types.TaxRateVat22, types.TaxRateVat120, types.TaxRateVat122,
-		types.TaxRateVat5, types.TaxRateVat7, types.TaxRateVat105, types.TaxRateVat107:
-		return true
-	default:
-		return false
-	}
+func isSupportedTaxRate(t TaxRate) bool {
+	return supportedTaxRatesRule.Validate(t) == nil
 }
 
-func isSupportedPaymentMethod(m types.PaymentMethod) bool {
-	switch m {
-	case types.PaymentMethodFullPrepayment, types.PaymentMethodPrepayment, types.PaymentMethodAdvance,
-		types.PaymentMethodFullPayment, types.PaymentMethodPartialPayment, types.PaymentMethodCredit,
-		types.PaymentMethodCreditPayment:
-		return true
-	default:
-		return false
-	}
+func isSupportedPaymentMethod(m PaymentMethod) bool {
+	return supportedPaymentMethodsRule.Validate(m) == nil
 }
 
-func isSupportedPaymentObject(o types.PaymentObject) bool {
-	switch o {
-	case types.PaymentObjectCommodity, types.PaymentObjectExcise, types.PaymentObjectJob,
-		types.PaymentObjectService, types.PaymentObjectGamblingBet, types.PaymentObjectGamblingPrize,
-		types.PaymentObjectLottery, types.PaymentObjectLotteryWin, types.PaymentObjectLotteryPrize,
-		types.PaymentObjectIntellectualActivity, types.PaymentObjectPayment, types.PaymentObjectAgentCommission,
-		types.PaymentObjectComposite, types.PaymentObjectResortFee, types.PaymentObjectAnother,
-		types.PaymentObjectPropertyRight, types.PaymentObjectNonOperatingGain, types.PaymentObjectInsurancePremium,
-		types.PaymentObjectSalesTax, types.PaymentObjectProductMark:
-		return true
-	default:
-		return false
-	}
+func isSupportedPaymentObject(o PaymentObject) bool {
+	return supportedPaymentObjectsRule.Validate(o) == nil
 }
 
 func formatOutSum(value float64) string {

@@ -31,7 +31,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/mikhail5545/go-robokassa-sdk/models/items"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 const (
@@ -48,9 +48,9 @@ const (
 )
 
 type CreateRefundRequest struct {
-	OpKey        string               `json:"OpKey"`
-	RefundSum    *float64             `json:"RefundSum,omitempty"`
-	InvoiceItems []*items.InvoiceItem `json:"InvoiceItems,omitempty"`
+	OpKey        string         `json:"OpKey"`
+	RefundSum    *float64       `json:"RefundSum,omitempty"`
+	InvoiceItems []*InvoiceItem `json:"InvoiceItems,omitempty"`
 }
 
 type CreateRefundResponse struct {
@@ -69,8 +69,8 @@ type RefundStateResponse struct {
 }
 
 func (c *Client) CreateRefund(ctx context.Context, req CreateRefundRequest) (*CreateRefundResponse, error) {
-	if strings.TrimSpace(c.password3) == "" {
-		return nil, errors.New("password3 is required for refund api")
+	if err := validateRequiredTrimmed(c.password3, "password3 is required for refund api"); err != nil {
+		return nil, err
 	}
 	if err := req.validate(); err != nil {
 		return nil, err
@@ -92,8 +92,8 @@ func (c *Client) CreateRefund(ctx context.Context, req CreateRefundRequest) (*Cr
 
 func (c *Client) GetRefundState(ctx context.Context, requestID string) (*RefundStateResponse, error) {
 	requestID = strings.TrimSpace(requestID)
-	if requestID == "" {
-		return nil, errors.New("request id is required")
+	if err := validateRequiredTrimmed(requestID, "request id is required"); err != nil {
+		return nil, err
 	}
 
 	params := make(url.Values)
@@ -142,16 +142,19 @@ func (c *Client) GetRefundState(ctx context.Context, requestID string) (*RefundS
 }
 
 func (r CreateRefundRequest) validate() error {
-	if strings.TrimSpace(r.OpKey) == "" {
-		return errors.New("op key is required")
-	}
-	if r.RefundSum != nil && *r.RefundSum <= 0 {
-		return errors.New("refund sum must be greater than zero")
-	}
-	if len(r.InvoiceItems) > 100 {
-		return errors.New("invoice items cannot contain more than 100 items")
-	}
-	return nil
+	err := validation.ValidateStruct(&r,
+		validation.Field(&r.OpKey, requiredTrimmedStringRule("op key is required")),
+		validation.Field(&r.RefundSum, validation.By(func(interface{}) error {
+			if r.RefundSum != nil && *r.RefundSum <= 0 {
+				return errors.New("refund sum must be greater than zero")
+			}
+			return nil
+		})),
+		validation.Field(&r.InvoiceItems, validation.By(func(interface{}) error {
+			return validateInvoiceItems(r.InvoiceItems, "invoice items")
+		})),
+	)
+	return firstValidationError(err, "OpKey", "RefundSum", "InvoiceItems")
 }
 
 func (c *Client) doRefundJWTRequest(ctx context.Context, path string, payload any) (*RawResponse, error) {
