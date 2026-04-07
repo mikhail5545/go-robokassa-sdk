@@ -32,6 +32,7 @@ type XMLResult struct {
 	Description string `xml:"Description"`
 }
 
+// XMLAPIError represents business-level XML API failure (`Result.Code != 0`).
 type XMLAPIError struct {
 	Code        int
 	Description string
@@ -95,6 +96,7 @@ type OpStateExtResponse struct {
 	UserFields []OpStateUserField `xml:"UserField>Field"`
 }
 
+// GetCurrencies requests available payment methods/currency groups from XML API.
 func (c *Client) GetCurrencies(ctx context.Context, language *Culture) (*GetCurrenciesResponse, error) {
 	lang := "ru"
 	if language != nil && strings.TrimSpace(language.String()) != "" {
@@ -123,6 +125,9 @@ func (c *Client) GetCurrencies(ctx context.Context, language *Culture) (*GetCurr
 	return &response, nil
 }
 
+// OpStateExt requests operation status/details by invoice id from XML API.
+//
+// password #2 must be configured via [WithPassword2].
 func (c *Client) OpStateExt(ctx context.Context, invoiceID int64) (*OpStateExtResponse, error) {
 	if err := validatePositiveInt64(invoiceID, "invoice id must be greater than zero"); err != nil {
 		return nil, err

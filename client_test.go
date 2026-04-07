@@ -52,6 +52,24 @@ func TestNewClient_ValidationAndDefaults(t *testing.T) {
 	if client.baseURL != defaultBaseURL {
 		t.Fatalf("unexpected default base url: got=%q want=%q", client.baseURL, defaultBaseURL)
 	}
+
+	_, err = NewClient("merchant", "password1", WithHTTPClient(nil))
+	if err == nil {
+		t.Fatal("expected error when custom http client is nil")
+	}
+
+	client, err = NewClient(
+		"merchant",
+		"password1",
+		WithHTTPClient(&http.Client{}),
+		WithHTTPClientTimeout(3*time.Second),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error with custom http client timeout: %v", err)
+	}
+	if client.httpClient.Timeout != 3*time.Second {
+		t.Fatalf("unexpected custom timeout: got=%s want=%s", client.httpClient.Timeout, 3*time.Second)
+	}
 }
 
 func TestCreateToken_UsesConfiguredAlgorithm(t *testing.T) {

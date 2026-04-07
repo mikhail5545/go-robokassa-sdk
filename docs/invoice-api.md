@@ -29,6 +29,12 @@ client, err := robokassa.NewClient(
 )
 ```
 
+Before production usage, align with Robokassa quick-start flow:
+
+1. Configure `ResultURL`, `SuccessURL`, `FailURL` in technical settings.
+2. Run test payments with `IsTest=1` on payment interface side.
+3. Confirm your `ResultURL` handler returns `OK{InvId}` after signature verification.
+
 ## Main methods
 
 ## `CreateInvoice(ctx, CreateInvoiceRequest)`

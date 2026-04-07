@@ -3,7 +3,7 @@
 [![Go Version](https://img.shields.io/badge/Go-1.25-blue.svg)](https://golanng.org)
 [![License](https://img.shields.io/badge/license-Apache_2.0-green)](https://www.apache.org/licenses/LICENSE-2.0)
 
-Go SDK for Robokassa payments that covers invoice lifecycle management, payment URL/signature building, XML service methods, refund operations, and webhook/JWS verification helpers.
+Comprehensive Go SDK for Robokassa payments that covers invoice lifecycle management, payment URL/signature building, XML service methods, refund operations, and webhook/JWS verification helpers.
 
 The library is designed for backend services that need a typed, testable integration layer around Robokassa endpoints. It keeps endpoint-specific request validation and signature/JWT creation inside the SDK so application code can focus on business logic.
 
@@ -45,6 +45,11 @@ go get github.com/mikhail5545/go-robokassa-sdk
 
 ## Quick start
 
+While integrating your apps with this SDK, please refer to official [Robokassa docs](https://docs.robokassa.ru/ru/quick-start).
+Remember, while testing you absolutely must use test passwords from your personal account and set `IsTest=1` in requests. 
+Before going live, configure `ResultURL`, `SuccessURL`, and `FailURL` in Robokassa technical settings.
+Per official quick-start flow, your `ResultURL` handler must return `OK{InvId}` after successful signature verification.
+
 ```go
 package main
 
@@ -57,13 +62,13 @@ import (
 )
 
 func main() {
-	client, err := robokassa.NewClient(robokassa.Config{
-		MerchantLogin:      "your-merchant-login",
-		Password1:          "your-password-1",
-		Password2:          "your-password-2", // required for ResultURL verification
-		Password3:          "your-password-3", // required for Refund API
-		SignatureAlgorithm: robokassa.SignatureAlgorithmSHA256,
-	})
+	client, err := robokassa.NewClient(
+		"your-merchant-login",
+		"your-password-1",
+		robokassa.WithPassword2("your-password-2"), // required for ResultURL verification
+		robokassa.WithPassword3("your-password-3"), // required for Refund API
+		robokassa.WithSignatureAlgorithm(robokassa.SignatureAlgorithmSHA256),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -126,17 +131,13 @@ fmt.Println("refund request id:", refund.RequestID)
 ### Verify ResultURL webhook
 
 ```go
-ok, err := client.VerifyResultSignature(
+if err := client.VerifyResultSignature(
 	"100.000000",
 	"1001",
 	"<SignatureValue from callback>",
 	map[string]string{"Shp_order": "1001"},
-)
-if err != nil {
+); err != nil {
 	log.Fatal(err)
-}
-if !ok {
-	log.Fatal("invalid result signature")
 }
 ack, err := robokassa.ResultAcknowledgement("1001")
 if err != nil {
@@ -207,3 +208,5 @@ fmt.Println(splitURL)
     - `GET https://services.robokassa.ru/RefundService/Refund/GetState?id=<requestId>`
 
 JWT for Invoice API is sent in request body as a JSON string, according to Robokassa docs.
+
+This project is licensed under [Apache License 2.0](LICENSE)

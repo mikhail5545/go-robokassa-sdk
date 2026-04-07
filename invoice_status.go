@@ -39,6 +39,7 @@ type InvoiceInformation struct {
 	Raw map[string]any
 }
 
+// InvoiceInformationListResponse is typed view of GetInvoiceInformationList payload.
 type InvoiceInformationListResponse struct {
 	CurrentPage int
 	PageSize    int
@@ -48,6 +49,7 @@ type InvoiceInformationListResponse struct {
 	RawResponse RawResponse
 }
 
+// GetInvoiceInformationListTyped requests invoice list and parses it to typed response.
 func (c *Client) GetInvoiceInformationListTyped(ctx context.Context, req GetInvoiceInformationListRequest) (*InvoiceInformationListResponse, error) {
 	raw, err := c.GetInvoiceInformationList(ctx, req)
 	if err != nil {
@@ -56,6 +58,7 @@ func (c *Client) GetInvoiceInformationListTyped(ctx context.Context, req GetInvo
 	return ParseInvoiceInformationListResponse(raw)
 }
 
+// ParseInvoiceInformationListResponse parses raw invoice list payload into typed fields.
 func ParseInvoiceInformationListResponse(raw *RawResponse) (*InvoiceInformationListResponse, error) {
 	if raw == nil {
 		return nil, errors.New("raw response is nil")

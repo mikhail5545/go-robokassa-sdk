@@ -123,6 +123,7 @@ func (c *Client) paymentSignatureBaseStringForProfile(profile paymentSignaturePr
 	return strings.Join(parts, ":")
 }
 
+// BuildConfirmPaymentFormValues builds signed form fields for hold confirmation endpoint.
 func (c *Client) BuildConfirmPaymentFormValues(req ConfirmPaymentRequest) (url.Values, error) {
 	merchantLogin, err := c.normalizeMerchantLogin(req.MerchantLogin)
 	if err != nil {
@@ -167,6 +168,7 @@ func (c *Client) BuildConfirmPaymentFormValues(req ConfirmPaymentRequest) (url.V
 	return values, nil
 }
 
+// BuildConfirmPaymentURL builds signed redirect URL for hold confirmation endpoint.
 func (c *Client) BuildConfirmPaymentURL(req ConfirmPaymentRequest) (string, error) {
 	values, err := c.BuildConfirmPaymentFormValues(req)
 	if err != nil {
@@ -175,6 +177,7 @@ func (c *Client) BuildConfirmPaymentURL(req ConfirmPaymentRequest) (string, erro
 	return buildURLWithValues(PaymentConfirmURL, values)
 }
 
+// BuildCancelPaymentFormValues builds signed form fields for hold cancellation endpoint.
 func (c *Client) BuildCancelPaymentFormValues(req CancelPaymentRequest) (url.Values, error) {
 	merchantLogin, err := c.normalizeMerchantLogin(req.MerchantLogin)
 	if err != nil {
@@ -212,6 +215,7 @@ func (c *Client) BuildCancelPaymentFormValues(req CancelPaymentRequest) (url.Val
 	return values, nil
 }
 
+// BuildCancelPaymentURL builds signed redirect URL for hold cancellation endpoint.
 func (c *Client) BuildCancelPaymentURL(req CancelPaymentRequest) (string, error) {
 	values, err := c.BuildCancelPaymentFormValues(req)
 	if err != nil {
@@ -220,6 +224,7 @@ func (c *Client) BuildCancelPaymentURL(req CancelPaymentRequest) (string, error)
 	return buildURLWithValues(PaymentCancelURL, values)
 }
 
+// BuildRecurringPaymentFormValues builds signed form fields for recurring child payment.
 func (c *Client) BuildRecurringPaymentFormValues(req RecurringPaymentRequest) (url.Values, error) {
 	n, previousInvoiceID, err := c.normalizeRecurringPaymentRequest(req)
 	if err != nil {
@@ -244,6 +249,7 @@ func (c *Client) BuildRecurringPaymentFormValues(req RecurringPaymentRequest) (u
 	return values, nil
 }
 
+// BuildRecurringPaymentURL builds signed redirect URL for recurring child payment.
 func (c *Client) BuildRecurringPaymentURL(req RecurringPaymentRequest) (string, error) {
 	values, err := c.BuildRecurringPaymentFormValues(req)
 	if err != nil {
@@ -252,6 +258,7 @@ func (c *Client) BuildRecurringPaymentURL(req RecurringPaymentRequest) (string, 
 	return buildURLWithValues(PaymentRecurringURL, values)
 }
 
+// BuildCoFPaymentFormValues builds signed form fields for saved-card (CoF) payment.
 func (c *Client) BuildCoFPaymentFormValues(req InitPaymentRequest) (url.Values, error) {
 	n, err := c.normalizeInitPaymentRequest(req)
 	if err != nil {
@@ -283,6 +290,7 @@ func (c *Client) BuildCoFPaymentFormValues(req InitPaymentRequest) (url.Values, 
 	return values, nil
 }
 
+// BuildCoFPaymentURL builds signed redirect URL for saved-card (CoF) payment.
 func (c *Client) BuildCoFPaymentURL(req InitPaymentRequest) (string, error) {
 	values, err := c.BuildCoFPaymentFormValues(req)
 	if err != nil {

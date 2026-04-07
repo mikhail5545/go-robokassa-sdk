@@ -35,18 +35,29 @@ const (
 type SignatureAlgorithm string
 
 const (
-	SignatureAlgorithmMD5       SignatureAlgorithm = "MD5"
+	// SignatureAlgorithmMD5 uses MD5 hash (default in many Robokassa setups).
+	SignatureAlgorithmMD5 SignatureAlgorithm = "MD5"
+	// SignatureAlgorithmRIPEMD160 uses RIPEMD160 hash.
 	SignatureAlgorithmRIPEMD160 SignatureAlgorithm = "RIPEMD160"
-	SignatureAlgorithmSHA1      SignatureAlgorithm = "SHA1"
-	SignatureAlgorithmHS1       SignatureAlgorithm = "HS1"
-	SignatureAlgorithmSHA256    SignatureAlgorithm = "SHA256"
-	SignatureAlgorithmHS256     SignatureAlgorithm = "HS256"
-	SignatureAlgorithmSHA384    SignatureAlgorithm = "SHA384"
-	SignatureAlgorithmHS384     SignatureAlgorithm = "HS384"
-	SignatureAlgorithmSHA512    SignatureAlgorithm = "SHA512"
-	SignatureAlgorithmHS512     SignatureAlgorithm = "HS512"
+	// SignatureAlgorithmSHA1 uses SHA1 hash.
+	SignatureAlgorithmSHA1 SignatureAlgorithm = "SHA1"
+	// SignatureAlgorithmHS1 is Robokassa alias for SHA1.
+	SignatureAlgorithmHS1 SignatureAlgorithm = "HS1"
+	// SignatureAlgorithmSHA256 uses SHA256 hash.
+	SignatureAlgorithmSHA256 SignatureAlgorithm = "SHA256"
+	// SignatureAlgorithmHS256 is Robokassa alias for SHA256.
+	SignatureAlgorithmHS256 SignatureAlgorithm = "HS256"
+	// SignatureAlgorithmSHA384 uses SHA384 hash.
+	SignatureAlgorithmSHA384 SignatureAlgorithm = "SHA384"
+	// SignatureAlgorithmHS384 is Robokassa alias for SHA384.
+	SignatureAlgorithmHS384 SignatureAlgorithm = "HS384"
+	// SignatureAlgorithmSHA512 uses SHA512 hash.
+	SignatureAlgorithmSHA512 SignatureAlgorithm = "SHA512"
+	// SignatureAlgorithmHS512 is Robokassa alias for SHA512.
+	SignatureAlgorithmHS512 SignatureAlgorithm = "HS512"
 )
 
+// Client is a typed SDK client for Robokassa Invoice, Payment Interface, XML and Refund APIs.
 type Client struct {
 	merchantLogin string
 	password1     string
@@ -59,6 +70,7 @@ type Client struct {
 	httpClient    *http.Client
 }
 
+// APIError represents non-2xx HTTP response from Robokassa endpoints.
 type APIError struct {
 	StatusCode int
 	Body       string
@@ -68,7 +80,9 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("robokassa api error: status=%d body=%q", e.StatusCode, e.Body)
 }
 
-// NewClient creates a new Robokassa API Client
+// NewClient creates a new Robokassa client with required MerchantLogin and password #1.
+//
+// Additional credentials and transport settings can be configured via [ClientOption].
 func NewClient(merchantLogin, password1 string, opt ...ClientOption) (*Client, error) {
 	if err := validateRequiredTrimmed(merchantLogin, "merchant login is required"); err != nil {
 		return nil, err

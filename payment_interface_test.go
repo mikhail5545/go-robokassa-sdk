@@ -26,6 +26,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"net/url"
 	"strings"
@@ -137,32 +138,28 @@ func TestResultAndSuccessSignature_Verification(t *testing.T) {
 		t.Fatalf("unexpected result signature: got=%q want=%q", resultSignature, expectedResult)
 	}
 
-	ok, err := client.VerifyResultSignature(outSum, invID, strings.ToUpper(resultSignature), shp)
-	if err != nil {
+	if err := client.VerifyResultSignature(outSum, invID, strings.ToUpper(resultSignature), shp); err != nil {
 		t.Fatalf("verify result signature: %v", err)
-	}
-	if !ok {
-		t.Fatal("expected valid result signature")
 	}
 
 	successSignature, err := client.SuccessSignature(outSum, invID, shp)
 	if err != nil {
 		t.Fatalf("success signature: %v", err)
 	}
-	ok, err = client.VerifySuccessSignature(outSum, invID, successSignature, shp)
-	if err != nil {
+	if err := client.VerifySuccessSignature(outSum, invID, successSignature, shp); err != nil {
 		t.Fatalf("verify success signature: %v", err)
 	}
-	if !ok {
-		t.Fatal("expected valid success signature")
-	}
 
-	ok, err = client.VerifySuccessSignature(outSum, invID, "bad-signature", shp)
-	if err != nil {
-		t.Fatalf("verify success signature with bad value: %v", err)
+	err = client.VerifySuccessSignature(outSum, invID, "bad-signature", shp)
+	if err == nil {
+		t.Fatal("expected invalid success signature error")
 	}
-	if ok {
-		t.Fatal("expected invalid success signature")
+	var mismatchErr *CallbackSignatureMismatchError
+	if !errors.As(err, &mismatchErr) {
+		t.Fatalf("expected CallbackSignatureMismatchError, got=%T (%v)", err, err)
+	}
+	if !errors.Is(err, ErrInvalidCallbackSignature) {
+		t.Fatalf("expected errors.Is(err, ErrInvalidCallbackSignature), got=%v", err)
 	}
 }
 
@@ -248,6 +245,8 @@ func TestParseAndVerifyResultURL2JWS(t *testing.T) {
 	tampered := parts[0] + "." + parts[1] + "." + replacement + parts[2][1:]
 	if err := VerifyResultURL2JWS(tampered, certificatePEM); err == nil {
 		t.Fatal("expected tampered jws verification error")
+	} else if !errors.Is(err, ErrResultURL2SignatureVerification) {
+		t.Fatalf("expected ErrResultURL2SignatureVerification, got=%v", err)
 	}
 }
 
@@ -257,6 +256,39 @@ func TestResultSignature_RequiresPassword2(t *testing.T) {
 	_, err := client.ResultSignature("10.00", "1", nil)
 	if err == nil {
 		t.Fatal("expected error when password2 is not configured")
+	}
+}
+
+func TestVerifyCallbackSignature_InvalidKind(t *testing.T) {
+	client := mustClient(t, "merchant", "password1", WithPassword2("password2"))
+
+	err := client.VerifyCallbackSignature("unknown", "10.00", "1", "deadbeef", nil)
+	if err == nil {
+		t.Fatal("expected invalid callback kind error")
+	}
+	if !errors.Is(err, ErrUnsupportedCallbackSignatureKind) {
+		t.Fatalf("expected ErrUnsupportedCallbackSignatureKind, got=%v", err)
+	}
+}
+
+func TestResultURL2ErrorClassification(t *testing.T) {
+	if _, err := ParseResultURL2JWS("bad-token"); err == nil {
+		t.Fatal("expected ParseResultURL2JWS error")
+	} else if !errors.Is(err, ErrResultURL2InvalidToken) {
+		t.Fatalf("expected ErrResultURL2InvalidToken, got=%v", err)
+	}
+
+	unsupportedAlgToken := strings.Join([]string{
+		base64.RawURLEncoding.EncodeToString([]byte(`{"typ":"JWT","alg":"HS256"}`)),
+		base64.RawURLEncoding.EncodeToString([]byte(`{"header":{"timestamp":"1"},"data":{"invId":"1"}}`)),
+		base64.RawURLEncoding.EncodeToString([]byte("signature")),
+	}, ".")
+
+	_, certificateDER := newTestCertificate(t)
+	if err := VerifyResultURL2JWS(unsupportedAlgToken, certificateDER); err == nil {
+		t.Fatal("expected unsupported algorithm error")
+	} else if !errors.Is(err, ErrResultURL2UnsupportedAlgorithm) {
+		t.Fatalf("expected ErrResultURL2UnsupportedAlgorithm, got=%v", err)
 	}
 }
 

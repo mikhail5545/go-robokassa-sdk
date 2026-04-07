@@ -51,6 +51,7 @@ Use these when you need two-stage payments, child recurring payments, or chargin
 ## Callback and signature helpers
 
 - `ResultSignature`, `SuccessSignature`
+- `VerifyCallbackSignature`
 - `VerifyResultSignature`, `VerifySuccessSignature`
 - `ParseCallbackNotification`
 - `VerifyResultNotification`, `VerifySuccessNotification`
@@ -59,6 +60,20 @@ Use these when you need two-stage payments, child recurring payments, or chargin
 - `VerifyResultURL2JWS`
 
 `ResultSignature` requires `password2` in client options.
+
+Verification methods return `error` (not `bool`). For signature mismatch, use
+`errors.Is(err, robokassa.ErrInvalidCallbackSignature)`.
+
+ResultURL2 JWS verification errors are also classified (`ErrResultURL2InvalidToken`,
+`ErrResultURL2UnsupportedAlgorithm`, `ErrResultURL2InvalidCertificate`,
+`ErrResultURL2SignatureVerification`).
+
+## Quick-start checklist alignment
+
+1. Set `ResultURL`, `SuccessURL`, `FailURL` in Robokassa technical settings.
+2. Verify callback signature before changing order state.
+3. Return exact acknowledgement `OK{InvId}` from `ResultURL`.
+4. Use test mode (`IsTest=1`) before production launch.
 
 ## Typical use cases
 
@@ -82,13 +97,13 @@ if err != nil {
     return err
 }
 
-ok, err := client.VerifyResultSignature(
+err = client.VerifyResultSignature(
     "149.500000",
     "1001",
     signatureValueFromCallback,
     map[string]string{"Shp_order": "1001"},
 )
-if err != nil || !ok {
+if err != nil {
     return fmt.Errorf("invalid result signature")
 }
 

@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 
+// Package robokassa is a comprehensive SDK for integrating Robokassa API into your systems.
+//
+// # Basic usage
+//
+// To start using client starts with creating a new Client with your merchant login and passwords (up to 3), but password1 is required. To do so, call NewClient:
+//
+//	client, err := robokassa.NewClient("your-login", "password1")
+//	if err != nil{
+//	  log.Fatalf("failed to create client: %v", err)
+//	}
 package robokassa
-
-import "errors"
-
-var (
-	ErrInvalidResultSignature = errors.New("invalid result signature")
-)

@@ -39,17 +39,22 @@ const (
 type RefundStatus string
 
 const (
-	RefundStatusFinished   RefundStatus = "finished"
+	// RefundStatusFinished indicates completed refund.
+	RefundStatusFinished RefundStatus = "finished"
+	// RefundStatusProcessing indicates refund still processing.
 	RefundStatusProcessing RefundStatus = "processing"
-	RefundStatusCanceled   RefundStatus = "canceled"
+	// RefundStatusCanceled indicates canceled/failed refund.
+	RefundStatusCanceled RefundStatus = "canceled"
 )
 
+// CreateRefundRequest contains fields for Refund/Create endpoint.
 type CreateRefundRequest struct {
 	OpKey        string         `json:"OpKey"`
 	RefundSum    *float64       `json:"RefundSum,omitempty"`
 	InvoiceItems []*InvoiceItem `json:"InvoiceItems,omitempty"`
 }
 
+// CreateRefundResponse is parsed response from Refund/Create.
 type CreateRefundResponse struct {
 	Success     bool
 	Message     string
@@ -57,6 +62,7 @@ type CreateRefundResponse struct {
 	RawResponse RawResponse
 }
 
+// RefundStateResponse is parsed response from Refund/GetState.
 type RefundStateResponse struct {
 	RequestID   string
 	Amount      *float64
@@ -65,6 +71,9 @@ type RefundStateResponse struct {
 	RawResponse RawResponse
 }
 
+// CreateRefund sends signed refund request to Robokassa Refund API.
+//
+// password #3 must be configured via [WithPassword3].
 func (c *Client) CreateRefund(ctx context.Context, req CreateRefundRequest) (*CreateRefundResponse, error) {
 	if err := validateRequiredTrimmed(c.password3, "password3 is required for refund api"); err != nil {
 		return nil, err
@@ -87,6 +96,7 @@ func (c *Client) CreateRefund(ctx context.Context, req CreateRefundRequest) (*Cr
 	return response, nil
 }
 
+// GetRefundState retrieves current refund request state by request id.
 func (c *Client) GetRefundState(ctx context.Context, requestID string) (*RefundStateResponse, error) {
 	requestID = strings.TrimSpace(requestID)
 	if err := validateRequiredTrimmed(requestID, "request id is required"); err != nil {
