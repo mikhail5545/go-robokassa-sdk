@@ -24,7 +24,6 @@ import (
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	internalvalidation "github.com/mikhail5545/go-robokassa-sdk/internal/validation"
 )
 
 const (
@@ -266,7 +265,7 @@ func validateDateRangeRequired(dateFrom, dateTo *time.Time) error {
 }
 
 func validateDateRangeOrder(dateFrom, dateTo *time.Time) error {
-	if !internalvalidation.IsTimeBefore(dateFrom, dateTo) {
+	if dateFrom != nil && dateTo != nil && dateTo.Before(*dateFrom) {
 		return errors.New("date range is invalid: DateTo cannot be before DateFrom")
 	}
 	return nil
@@ -283,12 +282,8 @@ func validateSumTo(sumFrom, sumTo *float64) error {
 	if sumTo != nil && *sumTo < 0 {
 		return errors.New("sum to cannot be negative")
 	}
-	if !isValidSumTo(sumFrom, sumTo) {
+	if sumFrom != nil && sumTo != nil && *sumTo < *sumFrom {
 		return errors.New("sum range is invalid: SumTo cannot be less than SumFrom")
 	}
 	return nil
-}
-
-func isValidSumTo(sumFrom, sumTo *float64) bool {
-	return sumFrom != nil && sumTo != nil && *sumTo > *sumFrom
 }

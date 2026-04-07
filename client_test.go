@@ -188,13 +188,14 @@ func TestGetInvoiceInformationList_Validation(t *testing.T) {
 	}
 
 	now := time.Now()
+	dateTo := now.Add(time.Duration(4) * time.Minute)
 	_, err = client.GetInvoiceInformationList(context.Background(), GetInvoiceInformationListRequest{
 		CurrentPage:     1,
 		PageSize:        10,
 		InvoiceStatuses: []InvoiceStatus{InvoiceStatusPaid},
 		InvoiceTypes:    []InvoiceType{InvoiceTypeOneTime},
 		DateFrom:        &now,
-		DateTo:          &now,
+		DateTo:          &dateTo,
 	})
 	if err != nil {
 		t.Fatalf("expected valid request, got error: %v", err)
