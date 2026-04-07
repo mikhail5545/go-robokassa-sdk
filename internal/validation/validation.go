@@ -20,6 +20,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	ozzo "github.com/go-ozzo/ozzo-validation/v4"
@@ -154,4 +155,12 @@ func IsSupportedPaymentMethod(value string) bool {
 func IsSupportedPaymentObject(value string) bool {
 	_, ok := supportedPaymentObjects[value]
 	return ok
+}
+
+func IsTimeBefore(t1, t2 *time.Time) bool {
+	return t1 != nil && t2 != nil && t1.Before(*t2)
+}
+
+func IsNotNulAndGreater(f1, f2 *float64) bool {
+	return f1 != nil && f2 != nil && *f1 > *f2
 }

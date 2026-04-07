@@ -1,4 +1,7 @@
 # go-robokassa-sdk
+[![ci.yml](https://github.com/mikhail5545/go-robokassa-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/mikhail5545/go-robokassa-sdk/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/badge/Go-1.25-blue.svg)](https://golanng.org)
+[![License](https://img.shields.io/badge/license-Apache_2.0-green)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Go SDK for Robokassa payments that covers invoice lifecycle management, payment URL/signature building, XML service methods, refund operations, and webhook/JWS verification helpers.
 

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	internalvalidation "github.com/mikhail5545/go-robokassa-sdk/internal/validation"
 )
 
 const (
@@ -38,39 +39,67 @@ type URLData struct {
 }
 
 type CreateInvoiceRequest struct {
-	MerchantLogin    string            `json:"MerchantLogin,omitempty"`
-	InvoiceType      InvoiceType       `json:"InvoiceType"`
-	Culture          *Culture          `json:"Culture,omitempty"`
-	InvID            *int64            `json:"InvId,omitempty"`
-	OutSum           float64           `json:"OutSum"`
-	Description      *string           `json:"Description,omitempty"`
-	MerchantComments *string           `json:"MerchantComments,omitempty"`
-	UserFields       map[string]string `json:"UserFields,omitempty"`
-	InvoiceItems     []*InvoiceItem    `json:"InvoiceItems,omitempty"`
-	SuccessURL2Data  *URLData          `json:"SuccessUrl2Data,omitempty"`
-	FailURL2Data     *URLData          `json:"FailUrl2Data,omitempty"`
+	// Store login, required for invoice creation.
+	MerchantLogin string `json:"MerchantLogin,omitempty"`
+	// Type of the invoice, required for invoice creation.
+	InvoiceType InvoiceType `json:"InvoiceType"`
+	// Optional interface language.
+	Culture *Culture `json:"Culture,omitempty"`
+	// Optional store account number.
+	InvID *int64 `json:"InvId,omitempty"`
+	// Required invoice amount.
+	OutSum float64 `json:"OutSum"`
+	// Optional name of the product or service.
+	Description *string `json:"Description,omitempty"`
+	// Optional internal comment for employees. Displayed in the "invoicing" section of your personal account.
+	MerchantComments *string `json:"MerchantComments,omitempty"`
+	// User parameters
+	UserFields map[string]string `json:"UserFields,omitempty"`
+	// Nomenclature for fiscalization (structure is similar to Receipt). If this parameter is not passed,
+	// the receipt will display the value "free sale", which is not compliant with tax legislation and may result in fines.
+	// In some fiscalization cases, the receipt will not be generated. Optional.
+	InvoiceItems []*InvoiceItem `json:"InvoiceItems,omitempty"`
+	// Optional additional redirect URL with method specification for redirect after success.
+	SuccessURL2Data *URLData `json:"SuccessUrl2Data,omitempty"`
+	// Optional additional redirect URL with method specification for redirect after fail.
+	FailURL2Data *URLData `json:"FailUrl2Data,omitempty"`
 }
 
 type DeactivateInvoiceRequest struct {
-	MerchantLogin string  `json:"MerchantLogin,omitempty"`
-	EncodedID     *string `json:"EncodedId,omitempty"`
-	ID            *string `json:"Id,omitempty"`
-	InvID         *int64  `json:"InvId,omitempty"`
+	MerchantLogin string `json:"MerchantLogin,omitempty"`
+	// The last part of the invoice link, e.g. 6hucaX7-BkKNi4lyi-Iu2g in auth.robokassa.ru/merchant/Invoice/6hucaX7-BkKNi4lyi-Iu2g
+	EncodedID *string `json:"EncodedId,omitempty"`
+	// Account ID, returned in the account creation response.
+	ID *string `json:"Id,omitempty"`
+	// The invoice number specified by the seller when creating the link. If not provided, it is generated
+	// automatically and is available in the invoice creation response and in the "invoicing" section.
+	InvID *int64 `json:"InvId,omitempty"`
 }
 
 type GetInvoiceInformationListRequest struct {
-	MerchantLogin   string          `json:"MerchantLogin,omitempty"`
-	CurrentPage     int             `json:"CurrentPage"`
-	PageSize        int             `json:"PageSize"`
+	MerchantLogin string `json:"MerchantLogin,omitempty"`
+	// Current page number (from 1), required
+	CurrentPage int `json:"CurrentPage"`
+	// Number of records in the response, required
+	PageSize int `json:"PageSize"`
+	// Invoice statuses, required
 	InvoiceStatuses []InvoiceStatus `json:"InvoiceStatuses"`
-	Keywords        *string         `json:"Keywords,omitempty"`
-	DateFrom        *time.Time      `json:"DateFrom"`
-	DateTo          *time.Time      `json:"DateTo"`
-	IsAscending     *bool           `json:"IsAscending,omitempty"`
-	InvoiceTypes    []InvoiceType   `json:"InvoiceTypes"`
-	PaymentAliases  []string        `json:"PaymentAliases,omitempty"`
-	SumFrom         *float64        `json:"SumFrom,omitempty"`
-	SumTo           *float64        `json:"SumTo,omitempty"`
+	// A string of keywords to search by amount, ID, description, or email
+	Keywords *string `json:"Keywords,omitempty"`
+	// The lower limit of the invoice creation date filter, required
+	DateFrom *time.Time `json:"DateFrom"`
+	// Upper limit of the invoice creation date filter, required
+	DateTo *time.Time `json:"DateTo"`
+	// Ascending sort flag
+	IsAscending *bool `json:"IsAscending,omitempty"`
+	// Link (Invoice) types, required
+	InvoiceTypes []InvoiceType `json:"InvoiceTypes"`
+	// List of payment aliases
+	PaymentAliases []string `json:"PaymentAliases,omitempty"`
+	// Minimum bill amount
+	SumFrom *float64 `json:"SumFrom,omitempty"`
+	// Maximum bill amount
+	SumTo *float64 `json:"SumTo,omitempty"`
 }
 
 type CreateInvoiceResponse struct {
@@ -78,6 +107,7 @@ type CreateInvoiceResponse struct {
 	RawResponse
 }
 
+// CreateInvoice creates a new billing link.
 func (c *Client) CreateInvoice(ctx context.Context, req CreateInvoiceRequest) (*CreateInvoiceResponse, error) {
 	if strings.TrimSpace(req.MerchantLogin) == "" {
 		req.MerchantLogin = c.merchantLogin
@@ -104,6 +134,7 @@ func (c *Client) CreateInvoice(ctx context.Context, req CreateInvoiceRequest) (*
 	return res, nil
 }
 
+// DeactivateInvoice deactivates invoice link.
 func (c *Client) DeactivateInvoice(ctx context.Context, req DeactivateInvoiceRequest) (*RawResponse, error) {
 	if strings.TrimSpace(req.MerchantLogin) == "" {
 		req.MerchantLogin = c.merchantLogin
@@ -114,6 +145,7 @@ func (c *Client) DeactivateInvoice(ctx context.Context, req DeactivateInvoiceReq
 	return c.doJWTRequest(ctx, invoiceDeactivateEndpoint, req)
 }
 
+// GetInvoiceInformationList retrieves list of invoices or links according to filters in GetInvoiceInformationListRequest
 func (c *Client) GetInvoiceInformationList(ctx context.Context, req GetInvoiceInformationListRequest) (*RawResponse, error) {
 	if strings.TrimSpace(req.MerchantLogin) == "" {
 		req.MerchantLogin = c.merchantLogin
@@ -127,18 +159,8 @@ func (c *Client) GetInvoiceInformationList(ctx context.Context, req GetInvoiceIn
 func (r CreateInvoiceRequest) validate() error {
 	err := validation.ValidateStruct(&r,
 		validation.Field(&r.MerchantLogin, requiredTrimmedStringRule("merchant login is required")),
-		validation.Field(&r.InvoiceType, validation.By(func(interface{}) error {
-			if r.InvoiceType != InvoiceTypeOneTime && r.InvoiceType != InvoiceTypeReusable {
-				return fmt.Errorf("invoice type must be %q or %q", InvoiceTypeOneTime, InvoiceTypeReusable)
-			}
-			return nil
-		})),
-		validation.Field(&r.OutSum, validation.By(func(interface{}) error {
-			if r.OutSum <= 0 {
-				return errors.New("out sum must be greater than zero")
-			}
-			return nil
-		})),
+		validation.Field(&r.InvoiceType, validation.Required, validation.In(InvoiceTypeOneTime, InvoiceTypeReusable).Error("must be InvoiceTypeOneTime or InvoiceTypeReusable")),
+		validation.Field(&r.OutSum, validation.Required.Error("must be greater than zero")),
 		validation.Field(&r.UserFields, validation.By(func(interface{}) error {
 			for key := range r.UserFields {
 				if strings.TrimSpace(key) == "" {
@@ -147,6 +169,7 @@ func (r CreateInvoiceRequest) validate() error {
 			}
 			return nil
 		})),
+		validation.Field(&r.Culture, validation.NilOrNotEmpty, validation.In(CultureEn, CultureRu).Error("must be CultureEn or CultureRu")),
 		validation.Field(&r.InvoiceItems, validation.By(func(interface{}) error {
 			return validateInvoiceItems(r.InvoiceItems, "invoice items")
 		})),
@@ -201,12 +224,9 @@ func (r GetInvoiceInformationListRequest) validate() error {
 	err := validation.ValidateStruct(&r,
 		validation.Field(&r.MerchantLogin, requiredTrimmedStringRule("merchant login is required")),
 		validation.Field(&r.CurrentPage, validation.By(func(interface{}) error { return validateCurrentPage(r.CurrentPage) })),
-		validation.Field(&r.PageSize, validation.By(func(interface{}) error { return validatePageSize(r.PageSize) })),
-		validation.Field(
-			&r.InvoiceStatuses,
-			validation.By(func(interface{}) error { return validateInvoiceStatuses(r.InvoiceStatuses) }),
-		),
-		validation.Field(&r.InvoiceTypes, validation.By(func(interface{}) error { return validateInvoiceTypes(r.InvoiceTypes) })),
+		validation.Field(&r.PageSize, validation.Required, validation.Min(1)),
+		validation.Field(&r.InvoiceStatuses, validation.Required, validation.Each(validation.In(InvoiceStatusPaid, InvoiceStatusExpired, InvoiceStatusNotPaid))),
+		validation.Field(&r.InvoiceTypes, validation.Each(validation.In(InvoiceTypeOneTime, InvoiceTypeReusable).Error("must be InvoiceTypeOneTime or InvoiceTypeReusable"))),
 		validation.Field(
 			&r.DateFrom,
 			validation.By(func(interface{}) error { return validateDateRangeRequired(r.DateFrom, r.DateTo) }),
@@ -238,37 +258,6 @@ func validateCurrentPage(currentPage int) error {
 	return nil
 }
 
-func validatePageSize(pageSize int) error {
-	if pageSize < 1 {
-		return errors.New("page size must be >= 1")
-	}
-	return nil
-}
-
-func validateInvoiceStatuses(statuses []InvoiceStatus) error {
-	if len(statuses) == 0 {
-		return errors.New("invoice statuses are required")
-	}
-	for _, status := range statuses {
-		if status != InvoiceStatusPaid && status != InvoiceStatusExpired && status != InvoiceStatusNotPaid {
-			return fmt.Errorf("unsupported invoice status: %q", status)
-		}
-	}
-	return nil
-}
-
-func validateInvoiceTypes(invoiceTypes []InvoiceType) error {
-	if len(invoiceTypes) == 0 {
-		return errors.New("invoice types are required")
-	}
-	for _, invoiceType := range invoiceTypes {
-		if invoiceType != InvoiceTypeOneTime && invoiceType != InvoiceTypeReusable {
-			return fmt.Errorf("unsupported invoice type: %q", invoiceType)
-		}
-	}
-	return nil
-}
-
 func validateDateRangeRequired(dateFrom, dateTo *time.Time) error {
 	if dateFrom == nil || dateTo == nil {
 		return errors.New("date range is required: DateFrom and DateTo")
@@ -277,7 +266,7 @@ func validateDateRangeRequired(dateFrom, dateTo *time.Time) error {
 }
 
 func validateDateRangeOrder(dateFrom, dateTo *time.Time) error {
-	if dateFrom != nil && dateTo != nil && dateTo.Before(*dateFrom) {
+	if !internalvalidation.IsTimeBefore(dateFrom, dateTo) {
 		return errors.New("date range is invalid: DateTo cannot be before DateFrom")
 	}
 	return nil
@@ -294,8 +283,12 @@ func validateSumTo(sumFrom, sumTo *float64) error {
 	if sumTo != nil && *sumTo < 0 {
 		return errors.New("sum to cannot be negative")
 	}
-	if sumFrom != nil && sumTo != nil && *sumTo < *sumFrom {
+	if !isValidSumTo(sumFrom, sumTo) {
 		return errors.New("sum range is invalid: SumTo cannot be less than SumFrom")
 	}
 	return nil
+}
+
+func isValidSumTo(sumFrom, sumTo *float64) bool {
+	return sumFrom != nil && sumTo != nil && *sumTo > *sumFrom
 }
