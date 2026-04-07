@@ -1,6 +1,8 @@
 # go-robokassa-sdk
 
-Go SDK for Robokassa Invoice API and payment interface helpers.
+Go SDK for Robokassa payments that covers invoice lifecycle management, payment URL/signature building, XML service methods, refund operations, and webhook/JWS verification helpers.
+
+The library is designed for backend services that need a typed, testable integration layer around Robokassa endpoints. It keeps endpoint-specific request validation and signature/JWT creation inside the SDK so application code can focus on business logic.
 
 ## Features
 
@@ -30,10 +32,13 @@ go get github.com/mikhail5545/go-robokassa-sdk
 - Current major version `v1` uses the base module path: `github.com/mikhail5545/go-robokassa-sdk`.
 - Semantic import suffixes are used only for future major versions (`/v2`, `/v3`, ...).
 
-## Breaking changes
+## Documentation
 
-- Legacy package paths `models/*` and `types/*` were removed.
-- Use root package types instead: `robokassa.Receipt`, `robokassa.ReceiptItem`, `robokassa.InvoiceItem`, `robokassa.SplitMerchant`, `robokassa.Quantity3`, `robokassa.Price8x2`, `robokassa.Amount`, and enum/constants from `robokassa` directly.
+- [Invoice API guide](docs/invoice-api.md)
+- [Payment Interface guide](docs/payment-interface.md)
+- [XML interfaces guide](docs/xml-interfaces.md)
+- [Refund API guide](docs/refund-api.md)
+- [Contributing guide](CONTRIBUTING.md)
 
 ## Quick start
 

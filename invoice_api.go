@@ -200,67 +200,23 @@ func (r DeactivateInvoiceRequest) validate() error {
 func (r GetInvoiceInformationListRequest) validate() error {
 	err := validation.ValidateStruct(&r,
 		validation.Field(&r.MerchantLogin, requiredTrimmedStringRule("merchant login is required")),
-		validation.Field(&r.CurrentPage, validation.By(func(interface{}) error {
-			if r.CurrentPage < 1 {
-				return errors.New("current page must be >= 1")
-			}
-			return nil
-		})),
-		validation.Field(&r.PageSize, validation.By(func(interface{}) error {
-			if r.PageSize < 1 {
-				return errors.New("page size must be >= 1")
-			}
-			return nil
-		})),
-		validation.Field(&r.InvoiceStatuses, validation.By(func(interface{}) error {
-			if len(r.InvoiceStatuses) == 0 {
-				return errors.New("invoice statuses are required")
-			}
-			for _, status := range r.InvoiceStatuses {
-				if status != InvoiceStatusPaid && status != InvoiceStatusExpired && status != InvoiceStatusNotPaid {
-					return fmt.Errorf("unsupported invoice status: %q", status)
-				}
-			}
-			return nil
-		})),
-		validation.Field(&r.InvoiceTypes, validation.By(func(interface{}) error {
-			if len(r.InvoiceTypes) == 0 {
-				return errors.New("invoice types are required")
-			}
-			for _, invoiceType := range r.InvoiceTypes {
-				if invoiceType != InvoiceTypeOneTime && invoiceType != InvoiceTypeReusable {
-					return fmt.Errorf("unsupported invoice type: %q", invoiceType)
-				}
-			}
-			return nil
-		})),
-		validation.Field(&r.DateFrom, validation.By(func(interface{}) error {
-			if r.DateFrom == nil || r.DateTo == nil {
-				return errors.New("date range is required: DateFrom and DateTo")
-			}
-			return nil
-		})),
-		validation.Field(&r.DateTo, validation.By(func(interface{}) error {
-			if r.DateFrom != nil && r.DateTo != nil && r.DateTo.Before(*r.DateFrom) {
-				return errors.New("date range is invalid: DateTo cannot be before DateFrom")
-			}
-			return nil
-		})),
-		validation.Field(&r.SumFrom, validation.By(func(interface{}) error {
-			if r.SumFrom != nil && *r.SumFrom < 0 {
-				return errors.New("sum from cannot be negative")
-			}
-			return nil
-		})),
-		validation.Field(&r.SumTo, validation.By(func(interface{}) error {
-			if r.SumTo != nil && *r.SumTo < 0 {
-				return errors.New("sum to cannot be negative")
-			}
-			if r.SumFrom != nil && r.SumTo != nil && *r.SumTo < *r.SumFrom {
-				return errors.New("sum range is invalid: SumTo cannot be less than SumFrom")
-			}
-			return nil
-		})),
+		validation.Field(&r.CurrentPage, validation.By(func(interface{}) error { return validateCurrentPage(r.CurrentPage) })),
+		validation.Field(&r.PageSize, validation.By(func(interface{}) error { return validatePageSize(r.PageSize) })),
+		validation.Field(
+			&r.InvoiceStatuses,
+			validation.By(func(interface{}) error { return validateInvoiceStatuses(r.InvoiceStatuses) }),
+		),
+		validation.Field(&r.InvoiceTypes, validation.By(func(interface{}) error { return validateInvoiceTypes(r.InvoiceTypes) })),
+		validation.Field(
+			&r.DateFrom,
+			validation.By(func(interface{}) error { return validateDateRangeRequired(r.DateFrom, r.DateTo) }),
+		),
+		validation.Field(
+			&r.DateTo,
+			validation.By(func(interface{}) error { return validateDateRangeOrder(r.DateFrom, r.DateTo) }),
+		),
+		validation.Field(&r.SumFrom, validation.By(func(interface{}) error { return validateSumFrom(r.SumFrom) })),
+		validation.Field(&r.SumTo, validation.By(func(interface{}) error { return validateSumTo(r.SumFrom, r.SumTo) })),
 	)
 	return firstValidationError(err,
 		"MerchantLogin",
@@ -273,4 +229,73 @@ func (r GetInvoiceInformationListRequest) validate() error {
 		"SumFrom",
 		"SumTo",
 	)
+}
+
+func validateCurrentPage(currentPage int) error {
+	if currentPage < 1 {
+		return errors.New("current page must be >= 1")
+	}
+	return nil
+}
+
+func validatePageSize(pageSize int) error {
+	if pageSize < 1 {
+		return errors.New("page size must be >= 1")
+	}
+	return nil
+}
+
+func validateInvoiceStatuses(statuses []InvoiceStatus) error {
+	if len(statuses) == 0 {
+		return errors.New("invoice statuses are required")
+	}
+	for _, status := range statuses {
+		if status != InvoiceStatusPaid && status != InvoiceStatusExpired && status != InvoiceStatusNotPaid {
+			return fmt.Errorf("unsupported invoice status: %q", status)
+		}
+	}
+	return nil
+}
+
+func validateInvoiceTypes(invoiceTypes []InvoiceType) error {
+	if len(invoiceTypes) == 0 {
+		return errors.New("invoice types are required")
+	}
+	for _, invoiceType := range invoiceTypes {
+		if invoiceType != InvoiceTypeOneTime && invoiceType != InvoiceTypeReusable {
+			return fmt.Errorf("unsupported invoice type: %q", invoiceType)
+		}
+	}
+	return nil
+}
+
+func validateDateRangeRequired(dateFrom, dateTo *time.Time) error {
+	if dateFrom == nil || dateTo == nil {
+		return errors.New("date range is required: DateFrom and DateTo")
+	}
+	return nil
+}
+
+func validateDateRangeOrder(dateFrom, dateTo *time.Time) error {
+	if dateFrom != nil && dateTo != nil && dateTo.Before(*dateFrom) {
+		return errors.New("date range is invalid: DateTo cannot be before DateFrom")
+	}
+	return nil
+}
+
+func validateSumFrom(sumFrom *float64) error {
+	if sumFrom != nil && *sumFrom < 0 {
+		return errors.New("sum from cannot be negative")
+	}
+	return nil
+}
+
+func validateSumTo(sumFrom, sumTo *float64) error {
+	if sumTo != nil && *sumTo < 0 {
+		return errors.New("sum to cannot be negative")
+	}
+	if sumFrom != nil && sumTo != nil && *sumTo < *sumFrom {
+		return errors.New("sum range is invalid: SumTo cannot be less than SumFrom")
+	}
+	return nil
 }

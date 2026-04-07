@@ -49,81 +49,78 @@ func marshalReceipt(r *Receipt) (string, error) {
 }
 
 func validateReceiptItem(index int, item *ReceiptItem) error {
-	if err := validation.Validate(
-		item,
-		validation.Required.Error(fmt.Sprintf("invalid receipt: item at index %d is nil", index)),
-	); err != nil {
+	if err := validateReceiptItemPresence(index, item); err != nil {
 		return err
 	}
-
-	if err := validation.Validate(
-		item.Name,
-		requiredTrimmedStringRule(fmt.Sprintf("invalid receipt item at index %d: name is required", index)),
-		maxRuneCountRule(128, fmt.Sprintf("invalid receipt item at index %d: name must not exceed 128 characters", index)),
-	); err != nil {
+	if err := validateReceiptItemName(index, item.Name); err != nil {
 		return err
 	}
-
-	if err := validation.Validate(
-		item.Quantity,
-		validation.By(func(value interface{}) error {
-			quantity, _ := value.(Quantity3)
-			if !quantity.IsValid() {
-				return fmt.Errorf("invalid receipt item at index %d: quantity must be within 0..99999.999", index)
-			}
-			return nil
-		}),
-		validation.By(func(value interface{}) error {
-			quantity, _ := value.(Quantity3)
-			if quantity <= 0 {
-				return fmt.Errorf("invalid receipt item at index %d: quantity must be > 0", index)
-			}
-			return nil
-		}),
-	); err != nil {
+	if err := validateReceiptItemQuantity(index, item.Quantity); err != nil {
 		return err
 	}
-
-	if err := validation.Validate(
-		item.Sum,
-		validation.By(func(value interface{}) error {
-			sum, _ := value.(Price8x2)
-			if !sum.IsValid() {
-				return fmt.Errorf("invalid receipt item at index %d: sum must be within 0..99999999.99", index)
-			}
-			return nil
-		}),
-	); err != nil {
+	if err := validateReceiptItemSum(index, item.Sum); err != nil {
 		return err
 	}
-
-	if item.Cost != nil {
-		if err := validation.Validate(
-			*item.Cost,
-			validation.By(func(value interface{}) error {
-				cost, _ := value.(Price8x2)
-				if !cost.IsValid() {
-					return fmt.Errorf("invalid receipt item at index %d: cost must be within 0..99999999.99", index)
-				}
-				return nil
-			}),
-		); err != nil {
-			return err
-		}
+	if err := validateReceiptItemCost(index, item.Cost); err != nil {
+		return err
 	}
-
-	if err := validation.Validate(item, validation.By(func(_ interface{}) error {
-		if item.Sum <= 0 && (item.Cost == nil || *item.Cost <= 0) {
-			return fmt.Errorf("invalid receipt item at index %d: sum or cost must be > 0", index)
-		}
-		return nil
-	})); err != nil {
+	if err := validateReceiptItemPositiveAmount(index, item.Sum, item.Cost); err != nil {
 		return err
 	}
 
 	if err := validation.Validate(item.Tax, receiptTaxRateRule(index)); err != nil {
 		return err
 	}
+	return validateOptionalReceiptPaymentFields(index, item)
+}
+
+func validateReceiptItemPresence(index int, item *ReceiptItem) error {
+	if item == nil {
+		return fmt.Errorf("invalid receipt: item at index %d is nil", index)
+	}
+	return nil
+}
+
+func validateReceiptItemName(index int, name string) error {
+	return validation.Validate(
+		name,
+		requiredTrimmedStringRule(fmt.Sprintf("invalid receipt item at index %d: name is required", index)),
+		maxRuneCountRule(128, fmt.Sprintf("invalid receipt item at index %d: name must not exceed 128 characters", index)),
+	)
+}
+
+func validateReceiptItemQuantity(index int, quantity Quantity3) error {
+	if !quantity.IsValid() {
+		return fmt.Errorf("invalid receipt item at index %d: quantity must be within 0..99999.999", index)
+	}
+	if quantity <= 0 {
+		return fmt.Errorf("invalid receipt item at index %d: quantity must be > 0", index)
+	}
+	return nil
+}
+
+func validateReceiptItemSum(index int, sum Price8x2) error {
+	if !sum.IsValid() {
+		return fmt.Errorf("invalid receipt item at index %d: sum must be within 0..99999999.99", index)
+	}
+	return nil
+}
+
+func validateReceiptItemCost(index int, cost *Price8x2) error {
+	if cost != nil && !cost.IsValid() {
+		return fmt.Errorf("invalid receipt item at index %d: cost must be within 0..99999999.99", index)
+	}
+	return nil
+}
+
+func validateReceiptItemPositiveAmount(index int, sum Price8x2, cost *Price8x2) error {
+	if sum <= 0 && (cost == nil || *cost <= 0) {
+		return fmt.Errorf("invalid receipt item at index %d: sum or cost must be > 0", index)
+	}
+	return nil
+}
+
+func validateOptionalReceiptPaymentFields(index int, item *ReceiptItem) error {
 	if item.PaymentMethod != nil {
 		if err := validation.Validate(*item.PaymentMethod, receiptPaymentMethodRule(index)); err != nil {
 			return err
@@ -134,7 +131,6 @@ func validateReceiptItem(index int, item *ReceiptItem) error {
 			return err
 		}
 	}
-
 	return nil
 }
 

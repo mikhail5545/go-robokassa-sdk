@@ -30,6 +30,10 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Check Cyclomatic Complexity (max 12, non-test files)
+        run: |
+          go run github.com/fzipp/gocyclo/cmd/gocyclo@latest -over 12 -ignore '.*_test\.go$' .
+
       - name: Run Tests, Collect Coverage
         run: |
           go test -v -covermode=atomic -coverprofile=coverage.out ./...

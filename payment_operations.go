@@ -162,12 +162,8 @@ func (c *Client) BuildConfirmPaymentFormValues(req ConfirmPaymentRequest) (url.V
 	values.Set("InvoiceID", invoiceID)
 	values.Set("OutSum", outSum)
 	values.Set("SignatureValue", signature)
-	if receiptJSON != "" {
-		values.Set("Receipt", receiptJSON)
-	}
-	for _, key := range sortedKeys(shp) {
-		values.Set(key, shp[key])
-	}
+	setValueIfNotEmpty(values, "Receipt", receiptJSON)
+	setShpValues(values, shp)
 	return values, nil
 }
 
@@ -211,12 +207,8 @@ func (c *Client) BuildCancelPaymentFormValues(req CancelPaymentRequest) (url.Val
 	values.Set("MerchantLogin", merchantLogin)
 	values.Set("InvoiceID", invoiceID)
 	values.Set("SignatureValue", signature)
-	if outSum != "" {
-		values.Set("OutSum", outSum)
-	}
-	for _, key := range sortedKeys(shp) {
-		values.Set(key, shp[key])
-	}
+	setValueIfNotEmpty(values, "OutSum", outSum)
+	setShpValues(values, shp)
 	return values, nil
 }
 
@@ -229,43 +221,9 @@ func (c *Client) BuildCancelPaymentURL(req CancelPaymentRequest) (string, error)
 }
 
 func (c *Client) BuildRecurringPaymentFormValues(req RecurringPaymentRequest) (url.Values, error) {
-	merchantLogin, err := c.normalizeMerchantLogin(req.MerchantLogin)
+	n, previousInvoiceID, err := c.normalizeRecurringPaymentRequest(req)
 	if err != nil {
 		return nil, err
-	}
-	invoiceID, err := normalizeInvoiceID(req.InvoiceID)
-	if err != nil {
-		return nil, err
-	}
-	if err := validation.Validate(
-		req.PreviousInvoiceID,
-		greaterThanZeroInt64Rule("previous invoice id must be greater than zero"),
-	); err != nil {
-		return nil, err
-	}
-	previousInvoiceID := strconv.FormatInt(req.PreviousInvoiceID, 10)
-	outSum, err := normalizeRequiredOutSum(req.OutSum, req.OutSumText)
-	if err != nil {
-		return nil, err
-	}
-	receiptJSON, err := marshalReceipt(req.Receipt)
-	if err != nil {
-		return nil, err
-	}
-	shp, err := normalizeShpParams(req.Shp)
-	if err != nil {
-		return nil, err
-	}
-
-	n := &normalizedPaymentRequest{
-		merchantLogin: merchantLogin,
-		outSum:        outSum,
-		invID:         invoiceID,
-		description:   trimPtr(req.Description),
-		email:         trimPtr(req.Email),
-		receiptJSON:   receiptJSON,
-		resultURL2:    trimPtr(req.ResultURL2),
-		shp:           shp,
 	}
 	signature, err := c.hashHex(c.paymentSignatureBaseStringForProfile(paymentSignatureProfileRecurring, n))
 	if err != nil {
@@ -273,26 +231,16 @@ func (c *Client) BuildRecurringPaymentFormValues(req RecurringPaymentRequest) (u
 	}
 
 	values := make(url.Values)
-	values.Set("MerchantLogin", merchantLogin)
-	values.Set("InvoiceID", invoiceID)
+	values.Set("MerchantLogin", n.merchantLogin)
+	values.Set("InvoiceID", n.invID)
 	values.Set("PreviousInvoiceID", previousInvoiceID)
-	values.Set("OutSum", outSum)
+	values.Set("OutSum", n.outSum)
 	values.Set("SignatureValue", signature)
-	if n.description != "" {
-		values.Set("Description", n.description)
-	}
-	if n.email != "" {
-		values.Set("Email", n.email)
-	}
-	if n.receiptJSON != "" {
-		values.Set("Receipt", n.receiptJSON)
-	}
-	if n.resultURL2 != "" {
-		values.Set("ResultUrl2", n.resultURL2)
-	}
-	for _, key := range sortedKeys(shp) {
-		values.Set(key, shp[key])
-	}
+	setValueIfNotEmpty(values, "Description", n.description)
+	setValueIfNotEmpty(values, "Email", n.email)
+	setValueIfNotEmpty(values, "Receipt", n.receiptJSON)
+	setValueIfNotEmpty(values, "ResultUrl2", n.resultURL2)
+	setShpValues(values, n.shp)
 	return values, nil
 }
 
@@ -323,33 +271,15 @@ func (c *Client) BuildCoFPaymentFormValues(req InitPaymentRequest) (url.Values, 
 	values.Set("OutSum", n.outSum)
 	values.Set("SignatureValue", signature)
 	values.Set("Token", n.token)
-	if n.invID != "" {
-		values.Set("InvId", n.invID)
-	}
-	if n.description != "" {
-		values.Set("Description", n.description)
-	}
-	if n.email != "" {
-		values.Set("Email", n.email)
-	}
-	if n.culture != "" {
-		values.Set("Culture", n.culture)
-	}
-	if n.encoding != "" {
-		values.Set("Encoding", n.encoding)
-	}
-	if n.isTest {
-		values.Set("IsTest", "1")
-	}
-	if n.receiptJSON != "" {
-		values.Set("Receipt", n.receiptJSON)
-	}
-	if n.resultURL2 != "" {
-		values.Set("ResultUrl2", n.resultURL2)
-	}
-	for _, key := range sortedKeys(n.shp) {
-		values.Set(key, n.shp[key])
-	}
+	setValueIfNotEmpty(values, "InvId", n.invID)
+	setValueIfNotEmpty(values, "Description", n.description)
+	setValueIfNotEmpty(values, "Email", n.email)
+	setValueIfNotEmpty(values, "Culture", n.culture)
+	setValueIfNotEmpty(values, "Encoding", n.encoding)
+	setValueIfNotEmpty(values, "Receipt", n.receiptJSON)
+	setValueIfNotEmpty(values, "ResultUrl2", n.resultURL2)
+	setValueIfTrue(values, "IsTest", "1", n.isTest)
+	setShpValues(values, n.shp)
 	return values, nil
 }
 
@@ -359,6 +289,49 @@ func (c *Client) BuildCoFPaymentURL(req InitPaymentRequest) (string, error) {
 		return "", err
 	}
 	return buildURLWithValues(PaymentCoFPaymentURL, values)
+}
+
+func (c *Client) normalizeRecurringPaymentRequest(
+	req RecurringPaymentRequest,
+) (*normalizedPaymentRequest, string, error) {
+	merchantLogin, err := c.normalizeMerchantLogin(req.MerchantLogin)
+	if err != nil {
+		return nil, "", err
+	}
+	invoiceID, err := normalizeInvoiceID(req.InvoiceID)
+	if err != nil {
+		return nil, "", err
+	}
+	if err := validation.Validate(
+		req.PreviousInvoiceID,
+		greaterThanZeroInt64Rule("previous invoice id must be greater than zero"),
+	); err != nil {
+		return nil, "", err
+	}
+	outSum, err := normalizeRequiredOutSum(req.OutSum, req.OutSumText)
+	if err != nil {
+		return nil, "", err
+	}
+	receiptJSON, err := marshalReceipt(req.Receipt)
+	if err != nil {
+		return nil, "", err
+	}
+	shp, err := normalizeShpParams(req.Shp)
+	if err != nil {
+		return nil, "", err
+	}
+
+	normalized := &normalizedPaymentRequest{
+		merchantLogin: merchantLogin,
+		outSum:        outSum,
+		invID:         invoiceID,
+		description:   trimPtr(req.Description),
+		email:         trimPtr(req.Email),
+		receiptJSON:   receiptJSON,
+		resultURL2:    trimPtr(req.ResultURL2),
+		shp:           shp,
+	}
+	return normalized, strconv.FormatInt(req.PreviousInvoiceID, 10), nil
 }
 
 func (c *Client) normalizeMerchantLogin(merchantLogin string) (string, error) {

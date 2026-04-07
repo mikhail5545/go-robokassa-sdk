@@ -173,65 +173,25 @@ func (c *Client) BuildPaymentFormValues(req InitPaymentRequest) (url.Values, err
 	values.Set("OutSum", n.outSum)
 	values.Set("SignatureValue", signature)
 
-	if n.invID != "" {
-		values.Set("InvId", n.invID)
-	}
-	if n.description != "" {
-		values.Set("Description", n.description)
-	}
-	if n.email != "" {
-		values.Set("Email", n.email)
-	}
-	if n.incCurrLabel != "" {
-		values.Set("IncCurrLabel", n.incCurrLabel)
-	}
-	if n.culture != "" {
-		values.Set("Culture", n.culture)
-	}
-	if n.encoding != "" {
-		values.Set("Encoding", n.encoding)
-	}
-	if n.isTest {
-		values.Set("IsTest", "1")
-	}
-	if n.expirationDate != "" {
-		values.Set("ExpirationDate", n.expirationDate)
-	}
-	if n.receiptJSON != "" {
-		values.Set("Receipt", n.receiptJSON)
-	}
-	if n.stepByStep != "" {
-		values.Set("StepByStep", n.stepByStep)
-	}
-	if n.resultURL2 != "" {
-		values.Set("ResultUrl2", n.resultURL2)
-	}
-	if n.successURL2 != "" {
-		values.Set("SuccessUrl2", n.successURL2)
-	}
-	if n.successURL2Method != "" {
-		values.Set("SuccessUrl2Method", n.successURL2Method)
-	}
-	if n.failURL2 != "" {
-		values.Set("FailUrl2", n.failURL2)
-	}
-	if n.failURL2Method != "" {
-		values.Set("FailUrl2Method", n.failURL2Method)
-	}
-	if n.token != "" {
-		values.Set("Token", n.token)
-	}
-	for _, method := range n.paymentMethods {
-		values.Add("PaymentMethods", method)
-	}
-	if n.recurring != "" {
-		values.Set("Recurring", n.recurring)
-	}
-
-	shpKeys := sortedKeys(n.shp)
-	for _, key := range shpKeys {
-		values.Set(key, n.shp[key])
-	}
+	setValueIfNotEmpty(values, "InvId", n.invID)
+	setValueIfNotEmpty(values, "Description", n.description)
+	setValueIfNotEmpty(values, "Email", n.email)
+	setValueIfNotEmpty(values, "IncCurrLabel", n.incCurrLabel)
+	setValueIfNotEmpty(values, "Culture", n.culture)
+	setValueIfNotEmpty(values, "Encoding", n.encoding)
+	setValueIfNotEmpty(values, "ExpirationDate", n.expirationDate)
+	setValueIfNotEmpty(values, "Receipt", n.receiptJSON)
+	setValueIfNotEmpty(values, "StepByStep", n.stepByStep)
+	setValueIfNotEmpty(values, "ResultUrl2", n.resultURL2)
+	setValueIfNotEmpty(values, "SuccessUrl2", n.successURL2)
+	setValueIfNotEmpty(values, "SuccessUrl2Method", n.successURL2Method)
+	setValueIfNotEmpty(values, "FailUrl2", n.failURL2)
+	setValueIfNotEmpty(values, "FailUrl2Method", n.failURL2Method)
+	setValueIfNotEmpty(values, "Token", n.token)
+	setValueIfNotEmpty(values, "Recurring", n.recurring)
+	setValueIfTrue(values, "IsTest", "1", n.isTest)
+	addPaymentMethods(values, n.paymentMethods)
+	setShpValues(values, n.shp)
 
 	return values, nil
 }
@@ -283,15 +243,6 @@ func (c *Client) normalizeInitPaymentRequest(req InitPaymentRequest) (*normalize
 		return nil, err
 	}
 
-	paymentMethods := make([]string, 0, len(req.PaymentMethods))
-	for _, method := range req.PaymentMethods {
-		method = strings.TrimSpace(method)
-		if method == "" {
-			continue
-		}
-		paymentMethods = append(paymentMethods, method)
-	}
-
 	n := &normalizedPaymentRequest{
 		merchantLogin:  merchantLogin,
 		outSum:         outSum,
@@ -305,10 +256,32 @@ func (c *Client) normalizeInitPaymentRequest(req InitPaymentRequest) (*normalize
 		successURL2:    trimPtr(req.SuccessURL2),
 		failURL2:       trimPtr(req.FailURL2),
 		token:          trimPtr(req.Token),
-		paymentMethods: paymentMethods,
+		paymentMethods: normalizePaymentMethods(req.PaymentMethods),
 		shp:            shp,
 	}
+	applyOptionalInitPaymentFields(n, req, successMethod, failMethod)
 
+	return n, nil
+}
+
+func normalizePaymentMethods(methods []string) []string {
+	normalized := make([]string, 0, len(methods))
+	for _, method := range methods {
+		method = strings.TrimSpace(method)
+		if method == "" {
+			continue
+		}
+		normalized = append(normalized, method)
+	}
+	return normalized
+}
+
+func applyOptionalInitPaymentFields(
+	n *normalizedPaymentRequest,
+	req InitPaymentRequest,
+	successMethod string,
+	failMethod string,
+) {
 	if req.InvID != nil {
 		n.invID = strconv.FormatInt(*req.InvID, 10)
 	}
@@ -326,8 +299,6 @@ func (c *Client) normalizeInitPaymentRequest(req InitPaymentRequest) (*normalize
 	}
 	n.successURL2Method = successMethod
 	n.failURL2Method = failMethod
-
-	return n, nil
 }
 
 func (c *Client) paymentSignatureBaseString(n *normalizedPaymentRequest) string {

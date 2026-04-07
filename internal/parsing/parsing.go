@@ -27,6 +27,16 @@ import (
 	"time"
 )
 
+var supportedTimeLayouts = []string{
+	time.RFC3339Nano,
+	time.RFC3339,
+	"2006-01-02T15:04:05",
+	"2006-01-02T15:04",
+	"2006-01-02 15:04:05",
+	"2006-01-02 15:04",
+	"2006-01-02",
+}
+
 func ParseRawResponse(body []byte) (json.RawMessage, string, map[string]any) {
 	raw := make([]byte, len(body))
 	copy(raw, body)
@@ -223,43 +233,43 @@ func ParseTime(value any) (time.Time, bool) {
 	case time.Time:
 		return typed.UTC(), true
 	case string:
-		s := strings.TrimSpace(typed)
-		if s == "" {
-			return time.Time{}, false
-		}
-		layouts := []string{
-			time.RFC3339Nano,
-			time.RFC3339,
-			"2006-01-02T15:04:05",
-			"2006-01-02T15:04",
-			"2006-01-02 15:04:05",
-			"2006-01-02 15:04",
-			"2006-01-02",
-		}
-		for _, layout := range layouts {
-			if parsed, err := time.Parse(layout, s); err == nil {
-				return parsed.UTC(), true
-			}
-		}
+		return parseTimeFromString(typed)
 	case float64:
-		if typed > 1e12 {
-			return time.UnixMilli(int64(typed)).UTC(), true
-		}
-		return time.Unix(int64(typed), 0).UTC(), true
+		return parseTimeFromUnix(int64(typed))
 	case int64:
-		if typed > 1e12 {
-			return time.UnixMilli(typed).UTC(), true
-		}
-		return time.Unix(typed, 0).UTC(), true
+		return parseTimeFromUnix(typed)
 	case json.Number:
-		if unix, err := typed.Int64(); err == nil {
-			if unix > 1e12 {
-				return time.UnixMilli(unix).UTC(), true
-			}
-			return time.Unix(unix, 0).UTC(), true
+		return parseTimeFromJSONNumber(typed)
+	}
+	return time.Time{}, false
+}
+
+func parseTimeFromString(value string) (time.Time, bool) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return time.Time{}, false
+	}
+	for _, layout := range supportedTimeLayouts {
+		if parsed, err := time.Parse(layout, trimmed); err == nil {
+			return parsed.UTC(), true
 		}
 	}
 	return time.Time{}, false
+}
+
+func parseTimeFromUnix(unix int64) (time.Time, bool) {
+	if unix > 1e12 {
+		return time.UnixMilli(unix).UTC(), true
+	}
+	return time.Unix(unix, 0).UTC(), true
+}
+
+func parseTimeFromJSONNumber(value json.Number) (time.Time, bool) {
+	unix, err := value.Int64()
+	if err != nil {
+		return time.Time{}, false
+	}
+	return parseTimeFromUnix(unix)
 }
 
 func CallbackValue(values url.Values, keys ...string) string {
