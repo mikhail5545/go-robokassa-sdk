@@ -61,10 +61,7 @@ func TestPrice8x2MarshalJSON_BoundsAndFormatting(t *testing.T) {
 }
 
 func TestBuildPaymentFormValues_RejectsOutOfRangeReceiptValues(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	_, err := client.BuildPaymentFormValues(InitPaymentRequest{
 		OutSum: 10,
@@ -88,10 +85,7 @@ func TestBuildPaymentFormValues_RejectsOutOfRangeReceiptValues(t *testing.T) {
 }
 
 func TestBuildSplitPaymentFormValues_ValidatesSplitSumAndAmountRange(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	_, err := client.BuildSplitPaymentFormValues(SplitPaymentInvoice{
 		OutAmount: 700,

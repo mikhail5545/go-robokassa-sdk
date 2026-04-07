@@ -30,10 +30,7 @@ import (
 )
 
 func TestBuildConfirmAndCancelPaymentFormValues_SignatureProfiles(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	confirmValues, err := client.BuildConfirmPaymentFormValues(ConfirmPaymentRequest{
 		InvoiceID: 15,
@@ -74,10 +71,7 @@ func TestBuildConfirmAndCancelPaymentFormValues_SignatureProfiles(t *testing.T) 
 }
 
 func TestBuildCoFPaymentFormValues_RequiresTokenAndUsesCoFProfile(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	_, err := client.BuildCoFPaymentFormValues(InitPaymentRequest{
 		OutSum: 10,
@@ -140,12 +134,7 @@ func TestXMLClient_GetCurrenciesAndOpStateExt(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-		Password2:     "password2",
-		XMLBaseURL:    server.URL,
-	})
+	client := mustClient(t, "merchant", "password1", WithPassword2("password2"), WithXMLBaseURL(server.URL))
 
 	lang := CultureRu
 	currencies, err := client.GetCurrencies(context.Background(), &lang)
@@ -213,12 +202,7 @@ func TestRefundAPI_CreateAndGetState(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-		Password3:     "password3",
-		RefundBaseURL: server.URL,
-	})
+	client := mustClient(t, "merchant", "password1", WithPassword3("password3"), WithRefundBaseURL(server.URL))
 
 	createResp, err := client.CreateRefund(context.Background(), CreateRefundRequest{
 		OpKey: "op-key-1",
@@ -240,10 +224,7 @@ func TestRefundAPI_CreateAndGetState(t *testing.T) {
 }
 
 func TestBuildSplitPaymentFormValues_SignsInvoiceJSON(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	values, err := client.BuildSplitPaymentFormValues(SplitPaymentInvoice{
 		OutAmount: 700,
@@ -276,10 +257,7 @@ func TestBuildSplitPaymentFormValues_SignsInvoiceJSON(t *testing.T) {
 }
 
 func TestBuildPaymentFormValues_ReceiptValidationParity(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	fullPayment := PaymentMethodFullPayment
 	lotteryPrize := PaymentObjectLotteryPrize

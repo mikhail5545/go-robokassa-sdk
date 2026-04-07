@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	createInvoicePath             = "/api/CreateInvoice"
-	deactivateInvoicePath         = "/api/DeactivateInvoice"
-	getInvoiceInformationListPath = "/api/GetInvoiceInformationList"
+	invoiceCreateEndpoint          = "/api/CreateInvoice"
+	invoiceDeactivateEndpoint      = "/api/DeactivateInvoice"
+	invoiceInformationListEndpoint = "/api/GetInvoiceInformationList"
 )
 
 type URLData struct {
@@ -87,7 +87,7 @@ func (c *Client) CreateInvoice(ctx context.Context, req CreateInvoiceRequest) (*
 		return nil, err
 	}
 
-	raw, err := c.doJWTRequest(ctx, createInvoicePath, req)
+	raw, err := c.doJWTRequest(ctx, invoiceCreateEndpoint, req)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (c *Client) DeactivateInvoice(ctx context.Context, req DeactivateInvoiceReq
 	if err := req.validate(); err != nil {
 		return nil, err
 	}
-	return c.doJWTRequest(ctx, deactivateInvoicePath, req)
+	return c.doJWTRequest(ctx, invoiceDeactivateEndpoint, req)
 }
 
 func (c *Client) GetInvoiceInformationList(ctx context.Context, req GetInvoiceInformationListRequest) (*RawResponse, error) {
@@ -121,7 +121,7 @@ func (c *Client) GetInvoiceInformationList(ctx context.Context, req GetInvoiceIn
 	if err := req.validate(); err != nil {
 		return nil, err
 	}
-	return c.doJWTRequest(ctx, getInvoiceInformationListPath, req)
+	return c.doJWTRequest(ctx, invoiceInformationListEndpoint, req)
 }
 
 func (r CreateInvoiceRequest) validate() error {

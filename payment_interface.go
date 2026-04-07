@@ -30,41 +30,78 @@ const (
 	PaymentGatewayURL = "https://auth.robokassa.ru/Merchant/Index.aspx"
 )
 
-// InitPaymentRequest contains fields for pay-interface initialization
-// (https://docs.robokassa.ru/ru/pay-interface).
+// InitPaymentRequest contains fields for [pay-interface] initialization
+//
+// [pay-interface]: https://docs.robokassa.ru/ru/pay-interface
 type InitPaymentRequest struct {
+	// Store login specified in technical settings
 	MerchantLogin string
-	OutSum        float64
+	// OutSum is the amount to be paid.
+	OutSum float64
 	// OutSumText can be used instead of OutSum to avoid float precision issues
 	// in signature-sensitive scenarios. Example: "10.00" or "10.000000".
 	OutSumText string
 
-	InvID       *int64
+	// InvID is the store invoice number. This parameter is optional, but it's strongly recommended using id by [official documentation].
+	// The number must be unique for each payment. Valid values are from 1 to int64 max. If the value is empty, equals 0 or is not specified,
+	// a unique value will be automatically assigned to it when the payment transaction is created.
+	//
+	// [official documentation]:  https://docs.robokassa.ru/ru/pay-interface#optional-parameters
+	InvID *int64
+	// Name of product or service (up to 100 characters, without special characters).
 	Description *string
-	Email       *string
+	// Buyer's email address. Used for receipts and notifications.
+	Email *string
 
+	// Suggested payment method. The payment method you recommend to your customers.
 	IncCurrLabel *string
-	Culture      *Culture
-	Encoding     *string
+	// Interface language
+	Culture *Culture
+	// Encoding of transmitted data (default UTF-8)
+	Encoding *string
 
+	// Enabling test mode
 	IsTest bool
 
+	// Payment deadline
 	ExpirationDate *time.Time
-	Receipt        *Receipt
+	// Fascial data
+	Receipt *Receipt
 
+	// A hold flag which means payment is processed in two stages.
+	// For details, see [Hold and Pre-Authorization]
+	//
+	// [Hold and Pre-Authorization]: https://docs.robokassa.ru/ru/holding
 	StepByStep bool
 
+	// Additional server callback. For hold ResultURL2, specify to receive a notification Result2 and include
+	// it in the signature along with StepByStep. For details, see [Additional payment notification in Result2].
+	//
+	// [Additional payment notification in Result2]: https://docs.robokassa.ru/ru/notifications-and-redirects#resulturl2
 	ResultURL2 *string
 
-	SuccessURL2       *string
+	// An additional return address for successful payment. For details, see [Additional Redirect].
+	//
+	// [Additional Redirect]: https://docs.robokassa.ru/ru/notifications-and-redirects#returnurl
+	SuccessURL2 *string
+	// Query method to SuccessURL2 (GET or POST).
 	SuccessURL2Method *string
-	FailURL2          *string
-	FailURL2Method    *string
+	// An additional return address for errors. For details, see [AdditionalRedirect (ReturnURL: FailUrl2)].
+	//
+	// [AdditionalRedirect (ReturnURL: FailUrl2)]: https://docs.robokassa.ru/ru/notifications-and-redirects#returnurl
+	FailURL2 *string
+	// Query method to FailURL2 (GET or POST).
+	FailURL2Method *string
 
+	// Saved card token. For details, see [Paying with a saved card].
+	//
+	// [Paying with a saved card]: https://docs.robokassa.ru/ru/saving
 	Token *string
 
+	// Specifies a list of available payment methods.
 	PaymentMethods []string
-	Recurring      *bool
+	// Recurring payment flag.
+	Recurring *bool
 
 	// User fields mapped to Shp_* params.
 	// Keys can be provided either with or without "Shp_" prefix.

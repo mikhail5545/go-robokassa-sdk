@@ -47,18 +47,6 @@ const (
 	SignatureAlgorithmHS512     SignatureAlgorithm = "HS512"
 )
 
-type Config struct {
-	MerchantLogin      string
-	Password1          string
-	Password2          string
-	Password3          string
-	SignatureAlgorithm SignatureAlgorithm
-	BaseURL            string
-	RefundBaseURL      string
-	XMLBaseURL         string
-	HTTPClient         *http.Client
-}
-
 type Client struct {
 	merchantLogin string
 	password1     string
@@ -80,51 +68,32 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("robokassa api error: status=%d body=%q", e.StatusCode, e.Body)
 }
 
-func NewClient(cfg Config) (*Client, error) {
-	if err := validateRequiredTrimmed(cfg.MerchantLogin, "merchant login is required"); err != nil {
+// NewClient creates a new Robokassa API Client
+func NewClient(merchantLogin, password1 string, opt ...ClientOption) (*Client, error) {
+	if err := validateRequiredTrimmed(merchantLogin, "merchant login is required"); err != nil {
 		return nil, err
 	}
-	if err := validateRequiredTrimmed(cfg.Password1, "password1 is required"); err != nil {
-		return nil, err
-	}
-
-	algorithm := cfg.SignatureAlgorithm
-	if algorithm == "" {
-		algorithm = SignatureAlgorithmMD5
-	}
-	if _, err := signerForAlgorithm(algorithm); err != nil {
+	if err := validateRequiredTrimmed(password1, "password1 is required"); err != nil {
 		return nil, err
 	}
 
-	baseURL := strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-	if baseURL == "" {
-		baseURL = defaultBaseURL
-	}
-	refundBaseURL := strings.TrimRight(strings.TrimSpace(cfg.RefundBaseURL), "/")
-	if refundBaseURL == "" {
-		refundBaseURL = defaultRefundBaseURL
-	}
-	xmlBaseURL := strings.TrimRight(strings.TrimSpace(cfg.XMLBaseURL), "/")
-	if xmlBaseURL == "" {
-		xmlBaseURL = defaultXMLBaseURL
+	client := &Client{
+		merchantLogin: merchantLogin,
+		password1:     password1,
+		algorithm:     SignatureAlgorithmMD5,
+		baseURL:       defaultBaseURL,
+		refundBaseURL: defaultRefundBaseURL,
+		xmlBaseURL:    defaultXMLBaseURL,
+		httpClient:    &http.Client{Timeout: 15 * time.Second},
 	}
 
-	httpClient := cfg.HTTPClient
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 15 * time.Second}
+	for _, o := range opt {
+		if err := o(client); err != nil {
+			return nil, err
+		}
 	}
 
-	return &Client{
-		merchantLogin: cfg.MerchantLogin,
-		password1:     cfg.Password1,
-		password2:     cfg.Password2,
-		password3:     cfg.Password3,
-		algorithm:     algorithm,
-		baseURL:       baseURL,
-		refundBaseURL: refundBaseURL,
-		xmlBaseURL:    xmlBaseURL,
-		httpClient:    httpClient,
-	}, nil
+	return client, nil
 }
 
 func (c *Client) doJWTRequest(ctx context.Context, path string, payload any) (*RawResponse, error) {

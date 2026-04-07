@@ -32,20 +32,17 @@ import (
 )
 
 func TestNewClient_ValidationAndDefaults(t *testing.T) {
-	_, err := NewClient(Config{Password1: "p1"})
+	_, err := NewClient("", "p1")
 	if err == nil {
 		t.Fatal("expected error when merchant login is missing")
 	}
 
-	_, err = NewClient(Config{MerchantLogin: "merchant"})
+	_, err = NewClient("merchant", "")
 	if err == nil {
 		t.Fatal("expected error when password1 is missing")
 	}
 
-	client, err := NewClient(Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client, err := NewClient("merchant", "password1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -58,11 +55,7 @@ func TestNewClient_ValidationAndDefaults(t *testing.T) {
 }
 
 func TestCreateToken_UsesConfiguredAlgorithm(t *testing.T) {
-	client, err := NewClient(Config{
-		MerchantLogin:      "merchant",
-		Password1:          "password1",
-		SignatureAlgorithm: SignatureAlgorithmHS256,
-	})
+	client, err := NewClient("merchant", "password1", WithSignatureAlgorithm(SignatureAlgorithmHS256))
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}
@@ -105,8 +98,8 @@ func TestCreateInvoice_AutoInjectsMerchantLoginAndParsesURLString(t *testing.T) 
 		if r.Method != http.MethodPost {
 			t.Fatalf("unexpected method: got=%s want=POST", r.Method)
 		}
-		if r.URL.Path != createInvoicePath {
-			t.Fatalf("unexpected path: got=%s want=%s", r.URL.Path, createInvoicePath)
+		if r.URL.Path != invoiceCreateEndpoint {
+			t.Fatalf("unexpected path: got=%s want=%s", r.URL.Path, invoiceCreateEndpoint)
 		}
 
 		body, err := io.ReadAll(r.Body)
@@ -142,11 +135,7 @@ func TestCreateInvoice_AutoInjectsMerchantLoginAndParsesURLString(t *testing.T) 
 	server := httptest.NewServer(handler)
 	defer server.Close()
 
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-		BaseURL:       server.URL,
-	})
+	client := mustClient(t, "merchant", "password1", WithBaseURL(server.URL))
 
 	resp, err := client.CreateInvoice(context.Background(), CreateInvoiceRequest{
 		InvoiceType: InvoiceTypeOneTime,
@@ -167,11 +156,7 @@ func TestCreateInvoice_ParsesURLFromObjectResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-		BaseURL:       server.URL,
-	})
+	client := mustClient(t, "merchant", "password1", WithBaseURL(server.URL))
 
 	resp, err := client.CreateInvoice(context.Background(), CreateInvoiceRequest{
 		InvoiceType: InvoiceTypeOneTime,
@@ -186,10 +171,7 @@ func TestCreateInvoice_ParsesURLFromObjectResponse(t *testing.T) {
 }
 
 func TestDeactivateInvoice_Validation(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	_, err := client.DeactivateInvoice(context.Background(), DeactivateInvoiceRequest{})
 	if err == nil {
@@ -198,10 +180,7 @@ func TestDeactivateInvoice_Validation(t *testing.T) {
 }
 
 func TestGetInvoiceInformationList_Validation(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	_, err := client.GetInvoiceInformationList(context.Background(), GetInvoiceInformationListRequest{})
 	if err == nil {
@@ -229,11 +208,7 @@ func TestCreateInvoice_PropagatesHTTPError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-		BaseURL:       server.URL,
-	})
+	client := mustClient(t, "merchant", "password1", WithBaseURL(server.URL))
 
 	_, err := client.CreateInvoice(context.Background(), CreateInvoiceRequest{
 		InvoiceType: InvoiceTypeOneTime,
@@ -252,9 +227,9 @@ func TestCreateInvoice_PropagatesHTTPError(t *testing.T) {
 	}
 }
 
-func mustClient(t *testing.T, cfg Config) *Client {
+func mustClient(t *testing.T, merchantLogin, password1 string, opt ...ClientOption) *Client {
 	t.Helper()
-	client, err := NewClient(cfg)
+	client, err := NewClient(merchantLogin, password1, opt...)
 	if err != nil {
 		t.Fatalf("new client: %v", err)
 	}

@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	refundCreatePath = "/Refund/Create"
-	refundStatePath  = "/Refund/GetState"
+	refundCreateEndpoint = "/Refund/Create"
+	refundStateEndpoint  = "/Refund/GetState"
 )
 
 type RefundStatus string
@@ -73,7 +73,7 @@ func (c *Client) CreateRefund(ctx context.Context, req CreateRefundRequest) (*Cr
 		return nil, err
 	}
 
-	raw, err := c.doRefundJWTRequest(ctx, refundCreatePath, req)
+	raw, err := c.doRefundJWTRequest(ctx, refundCreateEndpoint, req)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (c *Client) GetRefundState(ctx context.Context, requestID string) (*RefundS
 
 	params := make(url.Values)
 	params.Set("id", requestID)
-	endpoint := c.refundBaseURL + refundStatePath + "?" + params.Encode()
+	endpoint := c.refundBaseURL + refundStateEndpoint + "?" + params.Encode()
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {

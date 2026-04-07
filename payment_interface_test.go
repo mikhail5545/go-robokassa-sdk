@@ -34,11 +34,7 @@ import (
 )
 
 func TestBuildPaymentFormValues_SignsRequestWithModifiersAndShp(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin:      "merchant",
-		Password1:          "password1",
-		SignatureAlgorithm: SignatureAlgorithmMD5,
-	})
+	client := mustClient(t, "merchant", "password1", WithSignatureAlgorithm(SignatureAlgorithmMD5))
 
 	invID := int64(12)
 	desc := "Order #12"
@@ -123,12 +119,7 @@ func TestBuildPaymentFormValues_SignsRequestWithModifiersAndShp(t *testing.T) {
 }
 
 func TestResultAndSuccessSignature_Verification(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin:      "merchant",
-		Password1:          "password1",
-		Password2:          "password2",
-		SignatureAlgorithm: SignatureAlgorithmMD5,
-	})
+	client := mustClient(t, "merchant", "password1", WithPassword2("password2"), WithSignatureAlgorithm(SignatureAlgorithmMD5))
 
 	shp := map[string]string{
 		"Shp_oplata": "1",
@@ -261,10 +252,7 @@ func TestParseAndVerifyResultURL2JWS(t *testing.T) {
 }
 
 func TestResultSignature_RequiresPassword2(t *testing.T) {
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-	})
+	client := mustClient(t, "merchant", "password1")
 
 	_, err := client.ResultSignature("10.00", "1", nil)
 	if err == nil {

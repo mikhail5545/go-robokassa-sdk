@@ -81,8 +81,8 @@ func TestGetInvoiceInformationListTyped_UsesTypedParser(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("unexpected method: got=%s want=POST", r.Method)
 		}
-		if r.URL.Path != getInvoiceInformationListPath {
-			t.Fatalf("unexpected path: got=%s want=%s", r.URL.Path, getInvoiceInformationListPath)
+		if r.URL.Path != invoiceInformationListEndpoint {
+			t.Fatalf("unexpected path: got=%s want=%s", r.URL.Path, invoiceInformationListEndpoint)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -102,11 +102,7 @@ func TestGetInvoiceInformationListTyped_UsesTypedParser(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := mustClient(t, Config{
-		MerchantLogin: "merchant",
-		Password1:     "password1",
-		BaseURL:       server.URL,
-	})
+	client := mustClient(t, "merchant", "password1", WithBaseURL(server.URL))
 
 	from := time.Now().UTC().Add(-time.Hour)
 	to := time.Now().UTC()
