@@ -20,12 +20,8 @@ import (
 	internalnormalization "github.com/mikhail5545/go-robokassa-sdk/internal/normalization"
 )
 
-func normalizeRequiredOutSum(outSum float64, outSumText string) (string, error) {
-	return internalnormalization.NormalizeRequiredOutSum(outSum, outSumText)
-}
-
-func normalizeOptionalOutSum(outSum *float64, outSumText string) (string, error) {
-	return internalnormalization.NormalizeOptionalOutSum(outSum, outSumText)
+func normalizeOutSum(outSum *float64, outSumText string) (string, error) {
+	return internalnormalization.NormalizeOutSum(outSum, outSumText)
 }
 
 func normalizeDecimalStringAmount(raw string) (string, error) {

@@ -133,7 +133,7 @@ func (c *Client) BuildConfirmPaymentFormValues(req ConfirmPaymentRequest) (url.V
 	if err != nil {
 		return nil, err
 	}
-	outSum, err := normalizeRequiredOutSum(req.OutSum, req.OutSumText)
+	outSum, err := normalizeOutSum(&req.OutSum, req.OutSumText)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (c *Client) BuildCancelPaymentFormValues(req CancelPaymentRequest) (url.Val
 	if err != nil {
 		return nil, err
 	}
-	outSum, err := normalizeOptionalOutSum(req.OutSum, req.OutSumText)
+	outSum, err := normalizeOutSum(req.OutSum, req.OutSumText)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +316,7 @@ func (c *Client) normalizeRecurringPaymentRequest(
 	); err != nil {
 		return nil, "", err
 	}
-	outSum, err := normalizeRequiredOutSum(req.OutSum, req.OutSumText)
+	outSum, err := normalizeOutSum(&req.OutSum, req.OutSumText)
 	if err != nil {
 		return nil, "", err
 	}

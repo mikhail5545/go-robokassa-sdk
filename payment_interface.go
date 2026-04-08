@@ -219,7 +219,7 @@ func (c *Client) normalizeInitPaymentRequest(req InitPaymentRequest) (*normalize
 	if err != nil {
 		return nil, err
 	}
-	outSum, err := normalizeRequiredOutSum(req.OutSum, req.OutSumText)
+	outSum, err := normalizeOutSum(&req.OutSum, req.OutSumText)
 	if err != nil {
 		return nil, err
 	}

@@ -35,28 +35,7 @@ var (
 	shpKeySuffixRegex  = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
 )
 
-func NormalizeRequiredOutSum(outSum float64, outSumText string) (string, error) {
-	if strings.TrimSpace(outSumText) != "" {
-		normalized, err := NormalizeDecimalStringAmount(outSumText)
-		if err != nil {
-			return "", err
-		}
-		if err := ozzo.Validate(
-			normalized,
-			internalvalidation.PositiveDecimalStringRule("out sum has invalid numeric value", "out sum must be greater than zero"),
-		); err != nil {
-			return "", err
-		}
-		return normalized, nil
-	}
-
-	if err := ozzo.Validate(outSum, internalvalidation.GreaterThanZeroFloatRule("out sum must be greater than zero")); err != nil {
-		return "", err
-	}
-	return FormatOutSum(outSum), nil
-}
-
-func NormalizeOptionalOutSum(outSum *float64, outSumText string) (string, error) {
+func NormalizeOutSum(outSum *float64, outSumText string) (string, error) {
 	if strings.TrimSpace(outSumText) != "" {
 		normalized, err := NormalizeDecimalStringAmount(outSumText)
 		if err != nil {
