@@ -30,6 +30,13 @@ The library is designed for backend services that need a typed, testable integra
 go get github.com/mikhail5545/go-robokassa-sdk
 ```
 
+## Important notice
+
+While integrating your apps with this SDK, please refer to official [Robokassa docs](https://docs.robokassa.ru/ru/quick-start).
+Remember, while testing you absolutely must use test passwords from your personal account and set `IsTest=1` in requests.
+Before going live, configure `ResultURL`, `SuccessURL`, and `FailURL` in Robokassa technical settings.
+Per official quick-start flow, your `ResultURL` handler must return `OK{InvId}` after successful signature verification.
+
 ## Versioning policy
 
 - Current major version `v1` uses the base module path: `github.com/mikhail5545/go-robokassa-sdk`.
@@ -44,11 +51,6 @@ go get github.com/mikhail5545/go-robokassa-sdk
 - [Contributing guide](CONTRIBUTING.md)
 
 ## Quick start
-
-While integrating your apps with this SDK, please refer to official [Robokassa docs](https://docs.robokassa.ru/ru/quick-start).
-Remember, while testing you absolutely must use test passwords from your personal account and set `IsTest=1` in requests. 
-Before going live, configure `ResultURL`, `SuccessURL`, and `FailURL` in Robokassa technical settings.
-Per official quick-start flow, your `ResultURL` handler must return `OK{InvId}` after successful signature verification.
 
 ```go
 package main
@@ -186,6 +188,19 @@ if err != nil {
 }
 fmt.Println(splitURL)
 ```
+## Error Handling
+When you will try to verify callback/notification signature, you can encounter different errors.
+Here is the quick breakdown:
+
+   - ErrInvalidCallbackSignature  - indicates that callback signature comparison failed.
+   - ErrUnsupportedCallbackSignatureKind - indicates unsupported callback verification mode.
+   - ErrResultURL2InvalidToken - indicates malformed JWS token structure.
+   - ErrResultURL2InvalidHeader - indicates malformed JWS header JSON.
+   - ErrResultURL2InvalidPayload - indicates malformed JWS payload JSON.
+   - ErrResultURL2UnsupportedAlgorithm - indicates unsupported JWS signature algorithm.
+   - ErrResultURL2InvalidCertificate - indicates invalid certificate format/data.
+   - ErrResultURL2InvalidCertificateKey - indicates that certificate does not contain RSA public key.
+   - ErrResultURL2SignatureVerification - indicates failed RSA signature verification.
 
 ## Endpoints covered
 
