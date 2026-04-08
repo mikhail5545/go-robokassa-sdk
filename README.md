@@ -50,6 +50,8 @@ Per official quick-start flow, your `ResultURL` handler must return `OK{InvId}` 
 - [Refund API guide](docs/refund-api.md)
 - [Contributing guide](CONTRIBUTING.md)
 
+You can read the docs on [pkg.go.dev](https://pkg.go.dev/github.com/mikhail5545/go-robokassa-sdk)
+
 ## Quick start
 
 ```go
